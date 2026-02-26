@@ -15,18 +15,122 @@
 ## ファイル構成
 
 ./ (root)
-README.md: このファイル. タスク実行者が読むべきドキュメント
-json_to_csv.py: PDFのデータをJSON化したものを、CSVにコンバートするプログラム
-sample_歳入.json: 歳入の 特に 市税(款)のJSONのサンプル（期待する構造の参考）
+- README.md: このファイル. タスク実行者が読むべきドキュメント
+- split_budget_by_section.py: PDFを款ごとに分割し、PDF+テキストを出力
+- pdf_to_text.py: PDFからテキストを抽出（単体/ディレクトリ対応）
+- json_to_csv.py: JSONをCSVにコンバートするプログラム
+- sample_歳入.json: 歳入の市税(款)のJSONのサンプル（期待する構造の参考）
 
 ./n年度予算/
 - bugget.pdf：予算の元データ
-- bugget.json：予算をJSON化したもの
+- repaired.pdf：ghostscriptで修復したPDF（元PDFに問題がある場合）
+- 分割/：款ごとに分割されたPDF+テキストファイル
+  - 00_概要.pdf, 00_概要.txt
+  - 歳入_01款_市税.pdf, 歳入_01款_市税.txt
+  - ...
+  - 99_附属資料.pdf, 99_附属資料.txt
+- json/：款ごとのJSONファイル
+- bugget.json：予算をJSON化したもの（統合版）
 - bugget.csv：json_to_csv.py でJSONをCSV化したもの
 - extract_budget_v*.py：座標ベースPDF抽出スクリプト（推奨）
 - validate_json.py：JSONスキーマバリデーション
 - JSON_SPEC.md：期待するJSON構造の仕様書
 - 学び.md：その年度の作業で得た知見
+
+## プログラムの実行方法
+
+### 1. PDF分割（款ごとに分割 + テキスト抽出）
+
+```bash
+# 基本的な使い方
+python split_budget_by_section.py <入力PDF> [出力ディレクトリ] [--workers N]
+
+# 例: 8年度予算を分割
+python split_budget_by_section.py 8年度予算/repaired.pdf 8年度予算/分割 --workers 8
+```
+
+出力:
+- `00_概要.pdf`, `00_概要.txt`: 予算の概要部分（款の前）
+- `歳入_01款_市税.pdf`, `歳入_01款_市税.txt`: 各款のPDF+テキスト
+- `99_附属資料.pdf`, `99_附属資料.txt`: 給与費明細書、地方債調書など（款の後）
+
+必要条件: ghostscript (`brew install ghostscript`)
+
+### 2. テキスト抽出のみ
+
+```bash
+# 単一ファイル
+python pdf_to_text.py input.pdf
+
+# ディレクトリ内の全PDF
+python pdf_to_text.py 8年度予算/分割/ --workers 8
+```
+
+### 3. JSON → CSV変換
+
+```bash
+python json_to_csv.py 8年度予算/bugget.json 8年度予算/bugget.csv
+```
+
+---
+
+## 運用の進め方
+
+### Step 1: PDFの準備と分割
+
+```bash
+# 1. 元PDFが破損している場合は修復（必要に応じて）
+gs -sDEVICE=pdfwrite -dNOPAUSE -dBATCH -dSAFER -sOutputFile=repaired.pdf bugget.pdf
+
+# 2. 款ごとに分割（PDF + テキストを同時出力）
+python split_budget_by_section.py 8年度予算/repaired.pdf 8年度予算/分割 --workers 8
+```
+
+これで `8年度予算/分割/` に38セクション（76ファイル）が出力されます。
+
+### Step 2: テキストの確認と活用
+
+分割されたテキストファイルは以下の用途で活用できます:
+
+1. **内容確認**: 各款のテキストを目視確認
+2. **AI処理**: LLMに渡してJSON構造化を依頼
+3. **検索**: grep等で特定の項目を検索
+
+```bash
+# 例: 「教育費」関連のテキストを確認
+cat 8年度予算/分割/歳出_10款_教育費.txt
+
+# 例: 特定のキーワードを検索
+grep -r "補助金" 8年度予算/分割/*.txt
+```
+
+### Step 3: JSON作成
+
+各款のテキストから、AIまたは手動でJSONを作成します。
+
+```bash
+# 款ごとのJSONを json/ ディレクトリに保存
+mkdir -p 8年度予算/json/
+# → 歳入_01款_市税.json, 歳入_02款_地方譲与税.json, ... を作成
+```
+
+**推奨ワークフロー（AI活用）**:
+1. 分割テキストファイルをLLMに渡す
+2. `sample_歳入.json` と `JSON_SPEC.md` を参照させる
+3. 款単位でJSONを生成
+4. `validate_json.py` でバリデーション
+
+### Step 4: バリデーションとCSV出力
+
+```bash
+# JSONの検証
+python 8年度予算/validate_json.py 8年度予算/json/歳入_01款_市税.json
+
+# 全款を統合してCSV出力
+python json_to_csv.py 8年度予算/bugget.json 8年度予算/bugget.csv
+```
+
+---
 
 ## 注意点
 1. bugget.pdf データは 70MB 前後です。座標ベース抽出（pdfplumber）を使用する場合、ページ単位で処理するためトークン制限の心配は不要です。
