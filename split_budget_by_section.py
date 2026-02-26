@@ -2,65 +2,29 @@
 """
 予算書PDFを「款」セクションごとに分割するスクリプト
 
-OCRファイル（_ocr拡張子）を使用してページと款の対応を解析し、
+PDFから直接テキストを抽出して款の位置を検出し、
 ghostscriptでPDFを分割・修復します。
+各セクションのPDFとテキストファイルを同時に出力します。
 
 使用方法:
-    python split_budget_by_section.py <input_pdf> [output_dir]
+    python split_budget_by_section.py <input_pdf> [output_dir] [--workers N]
 
 例:
-    python split_budget_by_section.py 8年度予算/bugget.pdf 8年度予算/分割
+    python split_budget_by_section.py 8年度予算/repaired.pdf 8年度予算/分割
+    python split_budget_by_section.py 8年度予算/repaired.pdf 8年度予算/分割 --workers 8
 
 必要条件:
     - ghostscript (gs) コマンドがインストールされていること
     - brew install ghostscript
 """
 
+import argparse
 import re
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
-
-
-def parse_ocr_file(ocr_path: Path) -> dict[int, list[str]]:
-    """
-    OCRファイルを解析してページごとのテキストを取得する
-
-    Returns:
-        dict: {ページ番号(1-indexed): [そのページの行リスト]}
-    """
-    with open(ocr_path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    pages = {}
-    current_page = 0
-    current_lines = []
-
-    for line in content.split("\n"):
-        # 行番号を除去してテキストを取得
-        match = re.match(r'\s*\d+→(.*)$', line)
-        if match:
-            text = match.group(1)
-        else:
-            text = line
-
-        # ページ区切りを検出 「- N -」形式
-        page_match = re.search(r'^-\s*(\d+)\s*-$', text.strip())
-        if page_match:
-            # 前のページのデータを保存
-            if current_page > 0:
-                pages[current_page] = current_lines
-            current_page = int(page_match.group(1))
-            current_lines = []
-        else:
-            current_lines.append(text)
-
-    # 最後のページを保存
-    if current_page > 0:
-        pages[current_page] = current_lines
-
-    return pages
 
 
 def detect_kan_from_pdf(pdf_path: Path, total_pages: int) -> list[tuple[int, str, int, str]]:
@@ -199,13 +163,63 @@ def split_pdf_with_gs(input_path: Path, output_path: Path, first_page: int, last
     return output_path.exists()
 
 
-def split_pdf_by_section(input_path: str, output_dir: str = None) -> dict:
+def extract_text_from_pdf(pdf_path: Path) -> str:
+    """PDFからテキストを抽出する"""
+    result = subprocess.run([
+        "gs", "-q", "-dNOPAUSE", "-dBATCH", "-dSAFER",
+        "-sDEVICE=txtwrite",
+        "-sOutputFile=-",
+        str(pdf_path)
+    ], capture_output=True, text=True, timeout=300)
+
+    return result.stdout if result.returncode == 0 else ""
+
+
+def process_section(args: tuple) -> tuple[str, bool, str]:
     """
-    PDFを款セクションごとに分割する（ghostscript使用）
+    1つのセクションを処理（PDF分割 + テキスト抽出）
+    並行処理用の関数
+
+    Args:
+        args: (input_path, output_dir, section_key, start, end)
+
+    Returns:
+        (section_key, success, message)
+    """
+    input_path, output_dir, section_key, start, end = args
+
+    input_path = Path(input_path)
+    output_dir = Path(output_dir)
+
+    safe_name = section_key.replace("/", "・").replace("\\", "・")
+    pdf_path = output_dir / f"{safe_name}.pdf"
+    txt_path = output_dir / f"{safe_name}.txt"
+
+    # PDF分割
+    pdf_success = split_pdf_with_gs(input_path, pdf_path, start, end)
+
+    if not pdf_success:
+        return (section_key, False, "PDF分割失敗")
+
+    # テキスト抽出
+    text = extract_text_from_pdf(pdf_path)
+
+    if text:
+        with open(txt_path, 'w', encoding='utf-8') as f:
+            f.write(text)
+        return (section_key, True, f"ページ {start}-{end}")
+    else:
+        return (section_key, True, f"ページ {start}-{end} (テキスト抽出失敗)")
+
+
+def split_pdf_by_section(input_path: str, output_dir: str = None, workers: int = 4) -> dict:
+    """
+    PDFを款セクションごとに分割する（ghostscript使用、並行処理）
 
     Args:
         input_path: 入力PDFファイルのパス
         output_dir: 出力ディレクトリ（指定なしの場合は入力ファイルと同じディレクトリに作成）
+        workers: 並行処理のワーカー数
 
     Returns:
         分割結果の辞書 {セクション名: (開始ページ, 終了ページ, 出力パス)}
@@ -245,50 +259,61 @@ def split_pdf_by_section(input_path: str, output_dir: str = None) -> dict:
         print("エラー: 款セクションが検出できませんでした。")
         sys.exit(1)
 
-    # PDFを分割して保存（ghostscript使用）
-    print("\nPDFを分割中（ghostscriptで修復しながら分割）...")
+    # 並行処理用のタスクを作成
+    tasks = []
+    for section_key, (start, end) in section_ranges.items():
+        actual_end = min(end, total_pages)
+        tasks.append((str(input_path), str(output_dir), section_key, start, actual_end))
+
+    # PDF分割 + テキスト抽出を並行処理
+    print(f"\nPDF分割 + テキスト抽出中（{workers}ワーカー）...")
     results = {}
     success_count = 0
     fail_count = 0
 
-    for section_key, (start, end) in sorted(section_ranges.items()):
-        # ファイル名を生成（ファイルシステムに安全な名前に変換）
-        safe_name = section_key.replace("/", "・").replace("\\", "・")
-        output_path = output_dir / f"{safe_name}.pdf"
+    with ProcessPoolExecutor(max_workers=workers) as executor:
+        futures = {executor.submit(process_section, task): task[2] for task in tasks}
 
-        # ghostscriptでPDFを分割
-        actual_end = min(end, total_pages)
-        success = split_pdf_with_gs(input_path, output_path, start, actual_end)
+        for future in as_completed(futures):
+            section_key = futures[future]
+            try:
+                key, success, message = future.result()
+                safe_name = key.replace("/", "・").replace("\\", "・")
 
-        page_count = actual_end - start + 1
-        if success:
-            print(f"  {safe_name}: ページ {start}-{actual_end} ({page_count}ページ) -> {output_path.name}")
-            results[section_key] = (start, actual_end, str(output_path))
-            success_count += 1
-        else:
-            print(f"  {safe_name}: 失敗")
-            fail_count += 1
+                if success:
+                    print(f"  ✓ {safe_name}: {message}")
+                    start, end = section_ranges[key]
+                    results[key] = (start, min(end, total_pages), str(output_dir / f"{safe_name}.pdf"))
+                    success_count += 1
+                else:
+                    print(f"  ✗ {safe_name}: {message}")
+                    fail_count += 1
+            except Exception as e:
+                print(f"  ✗ {section_key}: {e}")
+                fail_count += 1
 
-    print(f"\n完了: {success_count} ファイルを {output_dir} に保存しました")
+    print(f"\n完了: {success_count} セクション（PDF + テキスト）を {output_dir} に保存しました")
     if fail_count > 0:
-        print(f"警告: {fail_count} ファイルの作成に失敗しました")
+        print(f"警告: {fail_count} セクションの処理に失敗しました")
 
     return results
 
 
 def main():
-    if len(sys.argv) < 2:
-        print(__doc__)
+    parser = argparse.ArgumentParser(
+        description="予算書PDFを款セクションごとに分割（PDF + テキスト出力）"
+    )
+    parser.add_argument("input_pdf", help="入力PDFファイルのパス")
+    parser.add_argument("output_dir", nargs="?", default=None, help="出力ディレクトリ（省略時は入力ファイルと同じ場所に「分割」フォルダを作成）")
+    parser.add_argument("--workers", "-w", type=int, default=4, help="並行処理のワーカー数（デフォルト: 4）")
+
+    args = parser.parse_args()
+
+    if not Path(args.input_pdf).exists():
+        print(f"エラー: ファイルが見つかりません: {args.input_pdf}")
         sys.exit(1)
 
-    input_path = sys.argv[1]
-    output_dir = sys.argv[2] if len(sys.argv) > 2 else None
-
-    if not Path(input_path).exists():
-        print(f"エラー: ファイルが見つかりません: {input_path}")
-        sys.exit(1)
-
-    split_pdf_by_section(input_path, output_dir)
+    split_pdf_by_section(args.input_pdf, args.output_dir, args.workers)
 
 
 if __name__ == "__main__":
