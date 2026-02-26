@@ -253,6 +253,13 @@ def split_pdf_by_section(input_path: str, output_dir: str = None, workers: int =
 
     # 款ごとのページ範囲を構築
     section_ranges = build_section_ranges(transitions, total_pages)
+
+    # 最初の款が始まる前のページを「00_概要」として追加
+    if transitions:
+        first_kan_page = transitions[0][0]
+        if first_kan_page > 1:
+            section_ranges["00_概要"] = (1, first_kan_page - 1)
+
     print(f"検出されたセクション数: {len(section_ranges)}")
 
     if not section_ranges:
