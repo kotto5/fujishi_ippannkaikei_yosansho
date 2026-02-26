@@ -27,18 +27,20 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 
-def detect_kan_from_pdf(pdf_path: Path, total_pages: int) -> list[tuple[int, str, int, str]]:
+def detect_kan_from_pdf(pdf_path: Path, total_pages: int) -> tuple[list[tuple[int, str, int, str]], int]:
     """
     PDFから直接款の位置を検出する
 
     Returns:
-        list of (page_num, section_type, kan_num, kan_name)
+        (list of (page_num, section_type, kan_num, kan_name), last_kan_page)
+        last_kan_page: 款が最後に出現したページ番号
     """
     print("PDFから款の位置を検出中...")
 
     kan_pages = {}  # {(section_type, kan_num): (page, name)}
     current_section = "歳入"
     prev_kan = 0
+    last_kan_page = 0  # 款が最後に出現したページ
 
     for page in range(1, total_pages + 1):
         result = subprocess.run([
@@ -52,6 +54,9 @@ def detect_kan_from_pdf(pdf_path: Path, total_pages: int) -> list[tuple[int, str
 
         # 款を検出
         matches = re.findall(r'([１-９][０-９]?|[0-9]{1,2})款\s*(\S+)', text)
+        if matches:
+            last_kan_page = page  # 款が出現したページを記録
+
         for num_str, name in matches:
             num = int(num_str.translate(str.maketrans('０１２３４５６７８９', '0123456789')))
             name = re.sub(r'[　\s].*', '', name)  # 最初の単語だけ
@@ -77,13 +82,17 @@ def detect_kan_from_pdf(pdf_path: Path, total_pages: int) -> list[tuple[int, str
     # ページ順にソート
     transitions.sort(key=lambda x: x[0])
 
-    print(f"  {len(transitions)} 款を検出")
-    return transitions
+    print(f"  {len(transitions)} 款を検出（款の最終ページ: {last_kan_page}）")
+    return transitions, last_kan_page
 
 
-def build_section_ranges(transitions: list[tuple[int, str, int, str]], max_page: int) -> dict[str, tuple[int, int]]:
+def build_section_ranges(transitions: list[tuple[int, str, int, str]], last_kan_page: int) -> dict[str, tuple[int, int]]:
     """
     款の遷移情報からページ範囲を構築する
+
+    Args:
+        transitions: 款の遷移リスト
+        last_kan_page: 款が最後に出現したページ番号
 
     Returns:
         dict: {セクションキー: (開始ページ, 終了ページ)}
@@ -91,11 +100,11 @@ def build_section_ranges(transitions: list[tuple[int, str, int, str]], max_page:
     section_ranges = {}
 
     for i, (start_page, section_type, kan_num, kan_name) in enumerate(transitions):
-        # 終了ページは次の款の開始ページ-1、または最後のページ
+        # 終了ページは次の款の開始ページ-1、または款の最終出現ページ
         if i + 1 < len(transitions):
             end_page = transitions[i + 1][0] - 1
         else:
-            end_page = max_page
+            end_page = last_kan_page  # 最後の款は、款が出現する最後のページまで
 
         key = f"{section_type}_{kan_num:02d}款_{kan_name}"
         section_ranges[key] = (start_page, end_page)
@@ -245,20 +254,24 @@ def split_pdf_by_section(input_path: str, output_dir: str = None, workers: int =
     print(f"総ページ数（PDF）: {total_pages}")
 
     # PDFから直接款の位置を検出
-    transitions = detect_kan_from_pdf(input_path, total_pages)
+    transitions, last_kan_page = detect_kan_from_pdf(input_path, total_pages)
 
     if not transitions:
         print("エラー: 款が検出できませんでした。")
         sys.exit(1)
 
-    # 款ごとのページ範囲を構築
-    section_ranges = build_section_ranges(transitions, total_pages)
+    # 款ごとのページ範囲を構築（最後の款は last_kan_page まで）
+    section_ranges = build_section_ranges(transitions, last_kan_page)
 
     # 最初の款が始まる前のページを「00_概要」として追加
     if transitions:
         first_kan_page = transitions[0][0]
         if first_kan_page > 1:
             section_ranges["00_概要"] = (1, first_kan_page - 1)
+
+    # 最後の款の後のページを「99_附属資料」として追加
+    if last_kan_page < total_pages:
+        section_ranges["99_附属資料"] = (last_kan_page + 1, total_pages)
 
     print(f"検出されたセクション数: {len(section_ranges)}")
 
