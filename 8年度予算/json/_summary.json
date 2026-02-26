@@ -1,0 +1,403 @@
+{
+  "source_file": "8年度予算/bugget.pdf_ocr",
+  "total_pages": 607,
+  "total_sections": 36,
+  "sections": [
+    {
+      "key": "歳入_01款_市税",
+      "type": "歳入",
+      "section": "01款_市税",
+      "page_count": 6,
+      "page_range": [
+        18,
+        23
+      ],
+      "file": "歳入_01款_市税.json"
+    },
+    {
+      "key": "歳入_02款_地方譲与税",
+      "type": "歳入",
+      "section": "02款_地方譲与税",
+      "page_count": 2,
+      "page_range": [
+        24,
+        25
+      ],
+      "file": "歳入_02款_地方譲与税.json"
+    },
+    {
+      "key": "歳入_03款_利子割交付",
+      "type": "歳入",
+      "section": "03款_利子割交付",
+      "page_count": 2,
+      "page_range": [
+        26,
+        27
+      ],
+      "file": "歳入_03款_利子割交付.json"
+    },
+    {
+      "key": "歳入_04款_配当割交付",
+      "type": "歳入",
+      "section": "04款_配当割交付",
+      "page_count": 2,
+      "page_range": [
+        28,
+        29
+      ],
+      "file": "歳入_04款_配当割交付.json"
+    },
+    {
+      "key": "歳入_05款_株式等譲渡所得割交付",
+      "type": "歳入",
+      "section": "05款_株式等譲渡所得割交付",
+      "page_count": 2,
+      "page_range": [
+        30,
+        31
+      ],
+      "file": "歳入_05款_株式等譲渡所得割交付.json"
+    },
+    {
+      "key": "歳入_06款_法人事業税交付",
+      "type": "歳入",
+      "section": "06款_法人事業税交付",
+      "page_count": 2,
+      "page_range": [
+        32,
+        33
+      ],
+      "file": "歳入_06款_法人事業税交付.json"
+    },
+    {
+      "key": "歳入_07款_地方消費税交付",
+      "type": "歳入",
+      "section": "07款_地方消費税交付",
+      "page_count": 2,
+      "page_range": [
+        34,
+        35
+      ],
+      "file": "歳入_07款_地方消費税交付.json"
+    },
+    {
+      "key": "歳入_08款_ゴルフ場利用税交付",
+      "type": "歳入",
+      "section": "08款_ゴルフ場利用税交付",
+      "page_count": 2,
+      "page_range": [
+        36,
+        37
+      ],
+      "file": "歳入_08款_ゴルフ場利用税交付.json"
+    },
+    {
+      "key": "歳入_09款_環境性能割交付",
+      "type": "歳入",
+      "section": "09款_環境性能割交付",
+      "page_count": 2,
+      "page_range": [
+        38,
+        39
+      ],
+      "file": "歳入_09款_環境性能割交付.json"
+    },
+    {
+      "key": "歳入_10款_地方特例交付",
+      "type": "歳入",
+      "section": "10款_地方特例交付",
+      "page_count": 2,
+      "page_range": [
+        40,
+        41
+      ],
+      "file": "歳入_10款_地方特例交付.json"
+    },
+    {
+      "key": "歳入_11款_地方交付税",
+      "type": "歳入",
+      "section": "11款_地方交付税",
+      "page_count": 2,
+      "page_range": [
+        42,
+        43
+      ],
+      "file": "歳入_11款_地方交付税.json"
+    },
+    {
+      "key": "歳入_12款_交通安全対策特別交付",
+      "type": "歳入",
+      "section": "12款_交通安全対策特別交付",
+      "page_count": 2,
+      "page_range": [
+        44,
+        45
+      ],
+      "file": "歳入_12款_交通安全対策特別交付.json"
+    },
+    {
+      "key": "歳入_13款_分担金及び負担",
+      "type": "歳入",
+      "section": "13款_分担金及び負担",
+      "page_count": 4,
+      "page_range": [
+        46,
+        49
+      ],
+      "file": "歳入_13款_分担金及び負担.json"
+    },
+    {
+      "key": "歳入_14款_使用料及び手数料",
+      "type": "歳入",
+      "section": "14款_使用料及び手数料",
+      "page_count": 12,
+      "page_range": [
+        50,
+        61
+      ],
+      "file": "歳入_14款_使用料及び手数料.json"
+    },
+    {
+      "key": "歳入_15款_国庫支出",
+      "type": "歳入",
+      "section": "15款_国庫支出",
+      "page_count": 32,
+      "page_range": [
+        62,
+        93
+      ],
+      "file": "歳入_15款_国庫支出.json"
+    },
+    {
+      "key": "歳入_16款_県支出",
+      "type": "歳入",
+      "section": "16款_県支出",
+      "page_count": 34,
+      "page_range": [
+        94,
+        127
+      ],
+      "file": "歳入_16款_県支出.json"
+    },
+    {
+      "key": "歳入_17款_財産収入",
+      "type": "歳入",
+      "section": "17款_財産収入",
+      "page_count": 4,
+      "page_range": [
+        128,
+        131
+      ],
+      "file": "歳入_17款_財産収入.json"
+    },
+    {
+      "key": "歳入_18款_寄附",
+      "type": "歳入",
+      "section": "18款_寄附",
+      "page_count": 2,
+      "page_range": [
+        132,
+        133
+      ],
+      "file": "歳入_18款_寄附.json"
+    },
+    {
+      "key": "歳入_19款_繰入",
+      "type": "歳入",
+      "section": "19款_繰入",
+      "page_count": 8,
+      "page_range": [
+        134,
+        141
+      ],
+      "file": "歳入_19款_繰入.json"
+    },
+    {
+      "key": "歳入_20款_繰越",
+      "type": "歳入",
+      "section": "20款_繰越",
+      "page_count": 2,
+      "page_range": [
+        142,
+        143
+      ],
+      "file": "歳入_20款_繰越.json"
+    },
+    {
+      "key": "歳入_21款_諸収入",
+      "type": "歳入",
+      "section": "21款_諸収入",
+      "page_count": 16,
+      "page_range": [
+        144,
+        159
+      ],
+      "file": "歳入_21款_諸収入.json"
+    },
+    {
+      "key": "歳入_22款_市債",
+      "type": "歳入",
+      "section": "22款_市債",
+      "page_count": 4,
+      "page_range": [
+        160,
+        163
+      ],
+      "file": "歳入_22款_市債.json"
+    },
+    {
+      "key": "歳出_01款_議会費",
+      "type": "歳出",
+      "section": "01款_議会費",
+      "page_count": 4,
+      "page_range": [
+        164,
+        167
+      ],
+      "file": "歳出_01款_議会費.json"
+    },
+    {
+      "key": "歳出_02款_総務費",
+      "type": "歳出",
+      "section": "02款_総務費",
+      "page_count": 80,
+      "page_range": [
+        168,
+        247
+      ],
+      "file": "歳出_02款_総務費.json"
+    },
+    {
+      "key": "歳出_03款_民生費",
+      "type": "歳出",
+      "section": "03款_民生費",
+      "page_count": 66,
+      "page_range": [
+        248,
+        313
+      ],
+      "file": "歳出_03款_民生費.json"
+    },
+    {
+      "key": "歳出_04款_衛生費",
+      "type": "歳出",
+      "section": "04款_衛生費",
+      "page_count": 56,
+      "page_range": [
+        314,
+        369
+      ],
+      "file": "歳出_04款_衛生費.json"
+    },
+    {
+      "key": "歳出_05款_労働費",
+      "type": "歳出",
+      "section": "05款_労働費",
+      "page_count": 6,
+      "page_range": [
+        370,
+        375
+      ],
+      "file": "歳出_05款_労働費.json"
+    },
+    {
+      "key": "歳出_06款_農林水産業費",
+      "type": "歳出",
+      "section": "06款_農林水産業費",
+      "page_count": 26,
+      "page_range": [
+        376,
+        401
+      ],
+      "file": "歳出_06款_農林水産業費.json"
+    },
+    {
+      "key": "歳出_07款_商工費",
+      "type": "歳出",
+      "section": "07款_商工費",
+      "page_count": 22,
+      "page_range": [
+        402,
+        423
+      ],
+      "file": "歳出_07款_商工費.json"
+    },
+    {
+      "key": "歳出_08款_土木費",
+      "type": "歳出",
+      "section": "08款_土木費",
+      "page_count": 64,
+      "page_range": [
+        424,
+        487
+      ],
+      "file": "歳出_08款_土木費.json"
+    },
+    {
+      "key": "歳出_09款_消防費",
+      "type": "歳出",
+      "section": "09款_消防費",
+      "page_count": 18,
+      "page_range": [
+        488,
+        505
+      ],
+      "file": "歳出_09款_消防費.json"
+    },
+    {
+      "key": "歳出_10款_教育費",
+      "type": "歳出",
+      "section": "10款_教育費",
+      "page_count": 74,
+      "page_range": [
+        506,
+        579
+      ],
+      "file": "歳出_10款_教育費.json"
+    },
+    {
+      "key": "歳出_11款_災害復旧費",
+      "type": "歳出",
+      "section": "11款_災害復旧費",
+      "page_count": 2,
+      "page_range": [
+        580,
+        581
+      ],
+      "file": "歳出_11款_災害復旧費.json"
+    },
+    {
+      "key": "歳出_12款_公債費",
+      "type": "歳出",
+      "section": "12款_公債費",
+      "page_count": 2,
+      "page_range": [
+        582,
+        583
+      ],
+      "file": "歳出_12款_公債費.json"
+    },
+    {
+      "key": "歳出_13款_諸支出",
+      "type": "歳出",
+      "section": "13款_諸支出",
+      "page_count": 2,
+      "page_range": [
+        584,
+        585
+      ],
+      "file": "歳出_13款_諸支出.json"
+    },
+    {
+      "key": "歳出_14款_予備費",
+      "type": "歳出",
+      "section": "14款_予備費",
+      "page_count": 22,
+      "page_range": [
+        586,
+        607
+      ],
+      "file": "歳出_14款_予備費.json"
+    }
+  ]
+}

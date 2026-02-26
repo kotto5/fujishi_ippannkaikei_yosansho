@@ -42,6 +42,8 @@ def process_setsumei(setsumei, rows):
 
 def flat_notes(setsumei):
     """説明から備考文字列を生成（子項目がない場合）"""
+    if not isinstance(setsumei, dict):
+        return ""
     notes = []
     for key, val in setsumei.items():
         if isinstance(val, str):
@@ -53,7 +55,9 @@ def flat_notes(setsumei):
 
 def has_named_sub_items(setsumei):
     """説明に名前付き子項目（金額あり dict）があるか"""
-    return any(is_sub_item(v) for v in setsumei.values())
+    if isinstance(setsumei, dict):
+        return any(is_sub_item(v) for v in setsumei.values())
+    return False
 
 
 def convert(data):
