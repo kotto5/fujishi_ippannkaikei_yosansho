@@ -32,11 +32,12 @@ type PipelineResult = Readonly<{
 /** Process a single sheet (款) */
 const processSheet = (sheet: SheetData): PipelineResult => {
   const { 款_code, 款_name } = parseSheetName(sheet.sheetName);
-  const kouChunks = splitByKou(sheet.rows);
+  const cleanSheetRows = stripHeaders(sheet.rows);
+  const kouChunks = splitByKou(cleanSheetRows);
 
   return kouChunks.reduce<PipelineResult>(
     (outerAcc, kou) => {
-      const cleanRows = stripHeaders(kou.rows);
+      const cleanRows = kou.rows;
       const { chunks: mokuChunks, keiRow } = splitByMoku(cleanRows);
 
       const mokuResults = mokuChunks.map((moku) => {

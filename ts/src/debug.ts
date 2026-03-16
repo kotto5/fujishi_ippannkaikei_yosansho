@@ -23,7 +23,8 @@ import { isHeaderRow, stripHeaders } from "./stripHeaders";
 import { COL, type Row } from "./types";
 import { cellStr, cellNum, cellIsNumber, cellRaw } from "./util";
 
-const OUT_DIR = join(import.meta.dirname ?? ".", "..", "..", "outputs", "debug");
+const inputBasename = (process.argv[2] ?? "unknown").replace(/^.*\//, "").replace(/\.[^.]+$/, "");
+const OUT_DIR = join(import.meta.dirname ?? ".", "..", "..", "outputs", "debug", inputBasename);
 
 /** Accumulate lines then flush to file */
 const createWriter = () => {
@@ -61,15 +62,37 @@ const rowSummary = (row: Row, rowIdx: number): string => {
   return `  row${String(rowIdx).padStart(5)}${tag} | C=${c} | E=${e} | L=${String(l)} | AL=${al} | AN=${an} | AQ=${String(aq)} | AT=${String(at ?? "")} | BL=${String(bl)} | BN=${String(bn)} | BR=${String(br)}`;
 };
 
+/** Row を全セル生データとしてダンプ（列番号付き） */
+const rowRawDump = (row: Row, rowIdx: number): string => {
+  const cells = row
+    .map((v, colIdx) => (v !== undefined && v !== null && String(v).trim() !== "")
+      ? `${colIdx}=${JSON.stringify(v)}`
+      : undefined)
+    .filter((x): x is string => x !== undefined)
+    .join(" | ");
+  return `  row${String(rowIdx).padStart(5)} | ${cells}`;
+};
+
 /** Dump全シート: 各過程の中間データを個別ファイルに出力 */
 const dumpAll = (sheets: ReadonlyArray<ReturnType<typeof readBudgetExcel>[number]>): void => {
+  // Step 0: Excel読み込み直後の全セル生データ
+  sheets.map((s) => {
+    const { 款_code, 款_name } = parseSheetName(s.sheetName);
+    const prefix = `${String(款_code).padStart(2, "0")}_${款_name}`;
+    const rawExcelWriter = createWriter();
+    rawExcelWriter.log(`=== Sheet "${s.sheetName}" — ${s.rows.length} rows (raw Excel data) ===`);
+    s.rows.map((row, i) => rawExcelWriter.log(rowRawDump(row, i)));
+    return rawExcelWriter.flush(`${prefix}/00_raw_excel.txt`);
+  });
+
   // サマリーファイル
   const summary = createWriter();
   summary.log("=== Sheets ===");
   sheets.map((s) => {
     const { 款_code, 款_name } = parseSheetName(s.sheetName);
-    const kouChunks = splitByKou(s.rows);
-    return summary.log(`  ${款_code} ${款_name}: ${s.rows.length} rows, ${kouChunks.length} 項`);
+    const clean = stripHeaders(s.rows);
+    const kouChunks = splitByKou(clean);
+    return summary.log(`  ${款_code} ${款_name}: ${s.rows.length} raw → ${clean.length} clean rows, ${kouChunks.length} 項`);
   });
   summary.flush("00_sheets.txt");
 
@@ -77,15 +100,20 @@ const dumpAll = (sheets: ReadonlyArray<ReturnType<typeof readBudgetExcel>[number
   sheets.map((s) => {
     const { 款_code, 款_name } = parseSheetName(s.sheetName);
     const prefix = `${String(款_code).padStart(2, "0")}_${款_name}`;
-    const kouChunks = splitByKou(s.rows);
+    const cleanSheetRows = stripHeaders(s.rows);
+    const kouChunks = splitByKou(cleanSheetRows);
+
+    // stripHeaders 前後比較
+    const stripWriter = createWriter();
+    stripWriter.log(`=== Sheet "${s.sheetName}" — ${s.rows.length} raw → ${cleanSheetRows.length} clean (${s.rows.length - cleanSheetRows.length} rows stripped) ===`);
+    stripWriter.flush(`${prefix}/00_strip_summary.txt`);
 
     // 項一覧
     const kouWriter = createWriter();
     kouWriter.log(`=== ${款_code} ${款_name} — ${kouChunks.length} 項チャンク ===`);
     kouChunks.map((k) => {
-      const clean = stripHeaders(k.rows);
-      const { chunks } = splitByMoku(clean);
-      return kouWriter.log(`  項${k.項_code} ${k.項_name}: ${k.rows.length} raw rows → ${clean.length} clean rows → ${chunks.length} 目`);
+      const { chunks } = splitByMoku(k.rows);
+      return kouWriter.log(`  項${k.項_code} ${k.項_name}: ${k.rows.length} rows → ${chunks.length} 目`);
     });
     kouWriter.flush(`${prefix}/00_kou_summary.txt`);
 
@@ -93,21 +121,8 @@ const dumpAll = (sheets: ReadonlyArray<ReturnType<typeof readBudgetExcel>[number
     kouChunks.map((k) => {
       const kouPrefix = `${prefix}/項${k.項_code}_${k.項_name}`;
 
-      // raw rows
-      const rawWriter = createWriter();
-      rawWriter.log(`=== 項${k.項_code} ${k.項_name} — ${k.rows.length} raw rows ===`);
-      k.rows.map((row, i) => rawWriter.log(rowSummary(row, i)));
-      rawWriter.flush(`${kouPrefix}/01_raw_rows.txt`);
-
-      // stripped headers
-      const strippedWriter = createWriter();
-      const strippedRows = k.rows.filter((row) => isHeaderRow(row));
-      strippedWriter.log(`=== Stripped header rows (${strippedRows.length} rows removed) ===`);
-      strippedRows.map((row, i) => strippedWriter.log(rowSummary(row, i)));
-      strippedWriter.flush(`${kouPrefix}/02_stripped_headers.txt`);
-
-      // clean rows
-      const clean = stripHeaders(k.rows);
+      // clean rows (stripHeaders already applied at sheet level)
+      const clean = k.rows;
       const cleanWriter = createWriter();
       cleanWriter.log(`=== Clean rows (${clean.length}) ===`);
       clean.map((row, i) => cleanWriter.log(rowSummary(row, i)));
