@@ -5,3 +5,6 @@
 __pycache__
 .pytest_cache
 !result/.gitkeep
+ts/node_modules
+outputs/debug
+ts/dist
