@@ -15,13 +15,13 @@ const main = (): void => {
     ? readFileSync(inputPath)
     : readFileSync("/dev/stdin");
 
-  const result = parseBudgetExcel(buffer as Buffer);
+  const { value: kans, errors } = parseBudgetExcel(buffer as Buffer);
 
   // Report validation errors to stderr
-  result.errors.length > 0 &&
+  errors.length > 0 &&
     process.stderr.write(
-      `\n=== Validation Errors (${result.errors.length}) ===\n` +
-      result.errors
+      `\n=== Validation Errors (${errors.length}) ===\n` +
+      errors
         .map(
           (e) =>
             `[${e.type}] ${e.context.kan_name}/${e.context.kou_name}/${e.context.moku_name}: expected=${e.expected}, actual=${e.actual}`,
@@ -31,12 +31,12 @@ const main = (): void => {
     );
 
   // Summary to stderr
-  const mokuCount = result.data.reduce((acc, kan) => acc + kan.kou.reduce((a, kou) => a + kou.moku.length, 0), 0);
-  process.stderr.write(`\nParsed: ${result.data.length} 款, ${mokuCount} 目\n`);
-  process.stderr.write(`Validation errors: ${result.errors.length}\n`);
+  const mokuCount = kans.reduce((acc, kan) => acc + kan.kou.reduce((a, kou) => a + kou.moku.length, 0), 0);
+  process.stderr.write(`\nParsed: ${kans.length} 款, ${mokuCount} 目\n`);
+  process.stderr.write(`Validation errors: ${errors.length}\n`);
 
   // Structured data to stdout
-  process.stdout.write(JSON.stringify(result.data, null, 2));
+  process.stdout.write(JSON.stringify(kans, null, 2));
 };
 
 main();

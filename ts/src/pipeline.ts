@@ -12,74 +12,85 @@ import { parseSheetName } from "./parseSheetName";
 import { splitByKou } from "./splitByKou";
 import { splitByMoku } from "./splitByMoku";
 import { stripHeaders } from "./stripHeaders";
-import type { Kan, Kou, Moku, ValidationError } from "./types";
+import type { Kan, Kou, KouCtx, Moku, MokuBudget, MokuChunk, ValidationError } from "./types";
 import { validateKouSum, validateSetsuSum, validateSetsumeiSum } from "./validate";
 
-type PipelineResult = Readonly<{
-  data: ReadonlyArray<Kan>;
+// ── Generic accumulator: chunk → node + errors ──
+
+type WithErrors<T> = Readonly<{
+  value: T;
   errors: ReadonlyArray<ValidationError>;
 }>;
 
-/** Process a single sheet → Kan */
-const processSheet = (sheet: SheetData): Readonly<{ kan: Kan; errors: ReadonlyArray<ValidationError> }> => {
-  const { kan_code, kan_name } = parseSheetName(sheet.sheetName);
-  const cleanSheetRows = stripHeaders(sheet.rows);
-  const kouChunks = splitByKou(cleanSheetRows);
-
-  const kouResults = kouChunks.map((kouChunk) => {
-    const { chunks: mokuChunks, keiRow } = splitByMoku(kouChunk.rows);
-
-    const mokuResults = mokuChunks.map((mokuChunk) => {
-      const setsuList = extractSetsu(mokuChunk.rows);
-      const setsumeiTree = extractSetsumei(mokuChunk.rows);
-
-      const moku: Moku = {
-        code: mokuChunk.code,
-        name: mokuChunk.name,
-        ...mokuChunk.budget,
-        setsu: setsuList,
-        setsumei: setsumeiTree,
-      };
-
-      const ctx = { kan_code, kan_name, kou_code: kouChunk.code, kou_name: kouChunk.name, moku_code: mokuChunk.code, moku_name: mokuChunk.name };
-      const errors: ReadonlyArray<ValidationError> = [
-        ...validateSetsuSum(ctx, mokuChunk.budget, setsuList),
-        ...validateSetsumeiSum(ctx, mokuChunk.budget, setsumeiTree),
-      ];
-
-      return { moku, errors, budget: mokuChunk.budget };
-    });
-
-    const kouErrors = validateKouSum(
-      { kan_code, kan_name, kou_code: kouChunk.code, kou_name: kouChunk.name },
-      keiRow,
-      mokuResults.map((r) => r.budget),
-    );
-
-    const kou: Kou = {
-      code: kouChunk.code,
-      name: kouChunk.name,
-      moku: mokuResults.map((r) => r.moku),
-    };
-
-    return { kou, errors: [...mokuResults.flatMap((r) => r.errors), ...kouErrors] };
-  });
-
-  const kan: Kan = {
-    code: kan_code,
-    name: kan_name,
-    kou: kouResults.map((r) => r.kou),
+/** Fold chunks into a parent node, accumulating errors from each child + optional parent-level validation */
+const foldChunks = <Chunk, Child, Parent>(
+  chunks: ReadonlyArray<Chunk>,
+  processChunk: (chunk: Chunk) => WithErrors<Child>,
+  assemble: (children: ReadonlyArray<Child>) => Parent,
+  validate: (children: ReadonlyArray<Child>) => ReadonlyArray<ValidationError> = () => [],
+): WithErrors<Parent> => {
+  const results = chunks.map(processChunk);
+  const children = results.map((r) => r.value);
+  return {
+    value: assemble(children),
+    errors: [...results.flatMap((r) => r.errors), ...validate(children)],
   };
+};
 
-  return { kan, errors: kouResults.flatMap((r) => r.errors) };
+// ── Per-level processors ──
+
+const processMoku = (chunk: MokuChunk, ctx: KouCtx): WithErrors<Moku & { budget: MokuBudget }> => {
+  const setsuList = extractSetsu(chunk.rows);
+  const setsumeiTree = extractSetsumei(chunk.rows);
+  const mokuCtx = { ...ctx, moku_code: chunk.code, moku_name: chunk.name };
+  return {
+    value: {
+      code: chunk.code,
+      name: chunk.name,
+      ...chunk.budget,
+      setsu: setsuList,
+      setsumei: setsumeiTree,
+      budget: chunk.budget,
+    },
+    errors: [
+      ...validateSetsuSum(mokuCtx, chunk.budget, setsuList),
+      ...validateSetsumeiSum(mokuCtx, chunk.budget, setsumeiTree),
+    ],
+  };
+};
+
+/** Process a single sheet → Kan */
+const processSheet = (sheet: SheetData): WithErrors<Kan> => {
+  const { kan_code, kan_name } = parseSheetName(sheet.sheetName);
+  const cleanRows = stripHeaders(sheet.rows);
+
+  return foldChunks(
+    splitByKou(cleanRows),
+    (kouChunk) => {
+      const { chunks: mokuChunks, keiRow } = splitByMoku(kouChunk.rows);
+      const kouCtx: KouCtx = { kan_code, kan_name, kou_code: kouChunk.code, kou_name: kouChunk.name };
+
+      return foldChunks(
+        mokuChunks,
+        (mc) => processMoku(mc, kouCtx),
+        (mokus): Kou => ({
+          code: kouChunk.code,
+          name: kouChunk.name,
+          moku: mokus.map(({ budget: _, ...m }) => m),
+        }),
+        (mokus) => validateKouSum(kouCtx, keiRow, mokus.map((m) => m.budget)),
+      );
+    },
+    (kous): Kan => ({ code: kan_code, name: kan_name, kou: kous }),
+  );
 };
 
 /** Main pipeline: Buffer → domain tree + validation errors */
-export const parseBudgetExcel = (buffer: Buffer): PipelineResult => {
+export const parseBudgetExcel = (buffer: Buffer): WithErrors<ReadonlyArray<Kan>> => {
   const sheets = readBudgetExcel(buffer);
-  const results = sheets.map(processSheet);
-  return {
-    data: results.map((r) => r.kan),
-    errors: results.flatMap((r) => r.errors),
-  };
+  return foldChunks(
+    sheets,
+    processSheet,
+    (kans) => kans,
+  );
 };

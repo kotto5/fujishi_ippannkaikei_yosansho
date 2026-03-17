@@ -111,11 +111,17 @@ export type MokuChunk = Readonly<{
   rows: ReadonlyArray<Row>;
 }>;
 
+// ── Hierarchical context: each level extends the parent ──
+
+export type KanCtx = Readonly<{ kan_code: KanCode; kan_name: string }>;
+export type KouCtx = KanCtx & Readonly<{ kou_code: KouCode; kou_name: string }>;
+export type MokuCtx = KouCtx & Readonly<{ moku_code: MokuCode; moku_name: string }>;
+
 // ── Validation ──
 
 export type ValidationError = Readonly<{
   type: "setsu_sum_mismatch" | "setsumei_sum_mismatch" | "kou_sum_mismatch";
-  context: Readonly<{ kan_code: KanCode; kan_name: string; kou_code: KouCode; kou_name: string; moku_code: MokuCode; moku_name: string }>;
+  context: MokuCtx;
   expected: number;
   actual: number;
 }>;

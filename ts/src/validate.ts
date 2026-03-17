@@ -7,7 +7,10 @@
  */
 
 import type {
+    KouCtx,
     MokuBudget,
+    MokuCode,
+    MokuCtx,
     Row,
     Setsu,
     Setsumei,
@@ -15,14 +18,12 @@ import type {
 } from "./types";
 import { COL } from "./types";
 
-type ValidationContext = ValidationError["context"];
-
 const sum = (ns: ReadonlyArray<number | null>): number =>
   ns.reduce<number>((acc, n) => acc + (n ?? 0), 0);
 
 /** Validate 節 sum matches 目 honendo */
 export const validateSetsuSum = (
-  context: ValidationContext,
+  context: MokuCtx,
   budget: MokuBudget,
   setsuList: ReadonlyArray<Setsu>,
 ): ReadonlyArray<ValidationError> => {
@@ -39,7 +40,7 @@ export const validateSetsuSum = (
 
 /** Validate 大事業 BR sum matches 目 honendo */
 export const validateSetsumeiSum = (
-  context: ValidationContext,
+  context: MokuCtx,
   budget: MokuBudget,
   tree: ReadonlyArray<Setsumei>,
 ): ReadonlyArray<ValidationError> => {
@@ -56,7 +57,7 @@ export const validateSetsumeiSum = (
 
 /** Validate 項合計 (計 row) matches sum of 目 honendo */
 export const validateKouSum = (
-  context: Readonly<{ kan_code: number; kan_name: string; kou_code: number; kou_name: string }>,
+  context: KouCtx,
   keiRow: Row | null,
   budgets: ReadonlyArray<MokuBudget>,
 ): ReadonlyArray<ValidationError> => {
@@ -70,9 +71,9 @@ export const validateKouSum = (
     ? []
     : (() => {
         const actual = sum(budgets.map((m) => m.honendo));
-        const ctx = { ...context, moku_code: 0, moku_name: "計" } as unknown as ValidationContext;
+        const mokuCtx: MokuCtx = { ...context, moku_code: 0 as MokuCode, moku_name: "計" };
         return actual === expected
           ? []
-          : [{ type: "kou_sum_mismatch" as const, context: ctx, expected, actual }];
+          : [{ type: "kou_sum_mismatch" as const, context: mokuCtx, expected, actual }];
       })();
 };
