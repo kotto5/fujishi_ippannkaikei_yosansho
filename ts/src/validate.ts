@@ -1,63 +1,64 @@
 /**
  * Step 6: 検算
  *
- * - 各目の 本年度 ＝ その目の節レコードの 金額合計
- * - 各目の 本年度 ＝ その目の大事業レコードの BR金額合計
- * - 各項の合計行 ＝ その項の目の 本年度 合計
+ * - 各目の honendo ＝ その目の節レコードの amount 合計
+ * - 各目の honendo ＝ その目の大事業レコードの BR amount 合計
+ * - 各項の合計行 ＝ その項の目の honendo 合計
  */
 
 import type {
-    Context,
-    DaijigyouRecord,
-    MokuMeta,
+    MokuBudget,
     Row,
-    SetsuRecord,
+    Setsu,
+    Setsumei,
     ValidationError,
 } from "./types";
 import { COL } from "./types";
 
+type ValidationContext = ValidationError["context"];
+
 const sum = (ns: ReadonlyArray<number | null>): number =>
   ns.reduce<number>((acc, n) => acc + (n ?? 0), 0);
 
-/** Validate 節 sum matches 目 本年度 */
+/** Validate 節 sum matches 目 honendo */
 export const validateSetsuSum = (
-  context: Context,
-  meta: MokuMeta,
-  setsuList: ReadonlyArray<SetsuRecord>,
+  context: ValidationContext,
+  budget: MokuBudget,
+  setsuList: ReadonlyArray<Setsu>,
 ): ReadonlyArray<ValidationError> => {
-  const expected = meta.本年度;
+  const expected = budget.honendo;
   return expected === null
     ? []
     : (() => {
-        const actual = sum(setsuList.map((s) => s.金額));
+        const actual = sum(setsuList.map((s) => s.amount));
         return actual === expected
           ? []
           : [{ type: "setsu_sum_mismatch" as const, context, expected, actual }];
       })();
 };
 
-/** Validate 大事業 BR sum matches 目 本年度 */
+/** Validate 大事業 BR sum matches 目 honendo */
 export const validateSetsumeiSum = (
-  context: Context,
-  meta: MokuMeta,
-  tree: ReadonlyArray<DaijigyouRecord>,
+  context: ValidationContext,
+  budget: MokuBudget,
+  tree: ReadonlyArray<Setsumei>,
 ): ReadonlyArray<ValidationError> => {
-  const expected = meta.本年度;
+  const expected = budget.honendo;
   return expected === null
     ? []
     : (() => {
-        const actual = sum(tree.map((d) => d.金額));
+        const actual = sum(tree.map((d) => d.amount));
         return actual === expected
           ? []
           : [{ type: "setsumei_sum_mismatch" as const, context, expected, actual }];
       })();
 };
 
-/** Validate 項合計 (計 row) matches sum of 目 本年度 */
+/** Validate 項合計 (計 row) matches sum of 目 honendo */
 export const validateKouSum = (
-  context: Readonly<{ 款_code: number; 款_name: string; 項_code: number; 項_name: string }>,
+  context: Readonly<{ kan_code: number; kan_name: string; kou_code: number; kou_name: string }>,
   keiRow: Row | null,
-  mokuMetas: ReadonlyArray<MokuMeta>,
+  budgets: ReadonlyArray<MokuBudget>,
 ): ReadonlyArray<ValidationError> => {
   const expected = keiRow !== null
     ? (() => {
@@ -68,8 +69,8 @@ export const validateKouSum = (
   return expected === null
     ? []
     : (() => {
-        const actual = sum(mokuMetas.map((m) => m.本年度));
-        const ctx = { ...context, 目_code: 0, 目_name: "計" } as unknown as Context;
+        const actual = sum(budgets.map((m) => m.honendo));
+        const ctx = { ...context, moku_code: 0, moku_name: "計" } as unknown as ValidationContext;
         return actual === expected
           ? []
           : [{ type: "kou_sum_mismatch" as const, context: ctx, expected, actual }];

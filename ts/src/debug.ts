@@ -15,7 +15,7 @@ import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readBudgetExcel } from "./excel";
 import { extractSetsu } from "./extractSetsu";
-import { extractSetsumei, flattenSetsumeiTree } from "./extractSetsumei";
+import { extractSetsumei } from "./extractSetsumei";
 import { parseSheetName } from "./parseSheetName";
 import { splitByKou } from "./splitByKou";
 import { splitByMoku } from "./splitByMoku";
@@ -77,8 +77,8 @@ const rowRawDump = (row: Row, rowIdx: number): string => {
 const dumpAll = (sheets: ReadonlyArray<ReturnType<typeof readBudgetExcel>[number]>): void => {
   // Step 0: Excel読み込み直後の全セル生データ
   sheets.map((s) => {
-    const { 款_code, 款_name } = parseSheetName(s.sheetName);
-    const prefix = `${String(款_code).padStart(2, "0")}_${款_name}`;
+    const { kan_code, kan_name } = parseSheetName(s.sheetName);
+    const prefix = `${String(kan_code).padStart(2, "0")}_${kan_name}`;
     const rawExcelWriter = createWriter();
     rawExcelWriter.log(`=== Sheet "${s.sheetName}" — ${s.rows.length} rows (raw Excel data) ===`);
     s.rows.map((row, i) => rawExcelWriter.log(rowRawDump(row, i)));
@@ -89,17 +89,17 @@ const dumpAll = (sheets: ReadonlyArray<ReturnType<typeof readBudgetExcel>[number
   const summary = createWriter();
   summary.log("=== Sheets ===");
   sheets.map((s) => {
-    const { 款_code, 款_name } = parseSheetName(s.sheetName);
+    const { kan_code, kan_name } = parseSheetName(s.sheetName);
     const clean = stripHeaders(s.rows);
     const kouChunks = splitByKou(clean);
-    return summary.log(`  ${款_code} ${款_name}: ${s.rows.length} raw → ${clean.length} clean rows, ${kouChunks.length} 項`);
+    return summary.log(`  ${kan_code} ${kan_name}: ${s.rows.length} raw → ${clean.length} clean rows, ${kouChunks.length} 項`);
   });
   summary.flush("00_sheets.txt");
 
   // 各シートを処理
   sheets.map((s) => {
-    const { 款_code, 款_name } = parseSheetName(s.sheetName);
-    const prefix = `${String(款_code).padStart(2, "0")}_${款_name}`;
+    const { kan_code, kan_name } = parseSheetName(s.sheetName);
+    const prefix = `${String(kan_code).padStart(2, "0")}_${kan_name}`;
     const cleanSheetRows = stripHeaders(s.rows);
     const kouChunks = splitByKou(cleanSheetRows);
 
@@ -110,16 +110,16 @@ const dumpAll = (sheets: ReadonlyArray<ReturnType<typeof readBudgetExcel>[number
 
     // 項一覧
     const kouWriter = createWriter();
-    kouWriter.log(`=== ${款_code} ${款_name} — ${kouChunks.length} 項チャンク ===`);
+    kouWriter.log(`=== ${kan_code} ${kan_name} — ${kouChunks.length} 項チャンク ===`);
     kouChunks.map((k) => {
       const { chunks } = splitByMoku(k.rows);
-      return kouWriter.log(`  項${k.項_code} ${k.項_name}: ${k.rows.length} rows → ${chunks.length} 目`);
+      return kouWriter.log(`  項${k.code} ${k.name}: ${k.rows.length} rows → ${chunks.length} 目`);
     });
     kouWriter.flush(`${prefix}/00_kou_summary.txt`);
 
     // 各項を処理
     kouChunks.map((k) => {
-      const kouPrefix = `${prefix}/項${k.項_code}_${k.項_name}`;
+      const kouPrefix = `${prefix}/項${k.code}_${k.name}`;
 
       // clean rows (stripHeaders already applied at sheet level)
       const clean = k.rows;
@@ -135,21 +135,21 @@ const dumpAll = (sheets: ReadonlyArray<ReturnType<typeof readBudgetExcel>[number
       mokuChunks.map((m) => {
         const setsuList = extractSetsu(m.rows);
         const setsumeiTree = extractSetsumei(m.rows);
-        const setsuSum = setsuList.reduce((acc, s_) => acc + (s_.金額 ?? 0), 0);
-        const setsumeiSum = setsumeiTree.reduce((acc, d) => acc + (d.金額 ?? 0), 0);
-        return mokuSummary.log(`  目${m.目_code} ${m.目_name}: 本年度=${m.meta.本年度} | ${m.rows.length} rows | ${setsuList.length} 節(sum=${setsuSum}) | ${setsumeiTree.length} 大事業(sum=${setsumeiSum})`);
+        const setsuSum = setsuList.reduce((acc, s_) => acc + (s_.amount ?? 0), 0);
+        const setsumeiSum = setsumeiTree.reduce((acc, d) => acc + (d.amount ?? 0), 0);
+        return mokuSummary.log(`  目${m.code} ${m.name}: honendo=${m.budget.honendo} | ${m.rows.length} rows | ${setsuList.length} 節(sum=${setsuSum}) | ${setsumeiTree.length} 大事業(sum=${setsumeiSum})`);
       });
       keiRow !== null && mokuSummary.log(`  計 row: L=${cellIsNumber(keiRow, COL.L) ? cellNum(keiRow, COL.L) : "N/A"}`);
       mokuSummary.flush(`${kouPrefix}/04_moku_summary.txt`);
 
       // 各目の詳細
       mokuChunks.map((m) => {
-        const mokuPrefix = `${kouPrefix}/目${m.目_code}_${m.目_name}`;
+        const mokuPrefix = `${kouPrefix}/目${m.code}_${m.name}`;
 
         // raw rows
         const mokuRaw = createWriter();
-        mokuRaw.log(`=== 目${m.目_code} ${m.目_name} — ${m.rows.length} rows ===`);
-        mokuRaw.logJson("Meta", m.meta);
+        mokuRaw.log(`=== 目${m.code} ${m.name} — ${m.rows.length} rows ===`);
+        mokuRaw.logJson("Budget", m.budget);
         mokuRaw.log("\n=== Raw rows ===");
         m.rows.map((row, i) => mokuRaw.log(rowSummary(row, i)));
         mokuRaw.flush(`${mokuPrefix}/01_rows.txt`);
@@ -164,13 +164,7 @@ const dumpAll = (sheets: ReadonlyArray<ReturnType<typeof readBudgetExcel>[number
         const setsumeiTree = extractSetsumei(m.rows);
         const setsumeiWriter = createWriter();
         setsumeiWriter.logJson("説明ツリー (extractSetsumei)", setsumeiTree);
-        setsumeiWriter.flush(`${mokuPrefix}/03_setsumei_tree.json`);
-
-        // 説明フラット
-        const flatSetsumei = flattenSetsumeiTree(setsumeiTree);
-        const flatWriter = createWriter();
-        flatWriter.logJson("説明フラット (flattenSetsumeiTree)", flatSetsumei);
-        return flatWriter.flush(`${mokuPrefix}/04_setsumei_flat.json`);
+        return setsumeiWriter.flush(`${mokuPrefix}/03_setsumei_tree.json`);
       });
       return undefined;
     });

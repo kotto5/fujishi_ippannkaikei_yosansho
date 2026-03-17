@@ -16,11 +16,8 @@
 import { match } from "ts-pattern";
 import {
   COL,
-  type DaijigyouRecord,
-  type FlatSetsumeiRecord,
-  type JigyouRecord,
   type Row,
-  type SaimokuRecord,
+  type Setsumei,
 } from "./types";
 import { cellIsNumber, cellRaw } from "./util";
 
@@ -100,83 +97,44 @@ const splitAt = <T>(items: ReadonlyArray<T>, pred: (item: T) => boolean): Readon
     [],
   );
 
-// ── Tree construction ──
+// ── Tree construction using domain Setsumei type ──
 
-const parseSaimoku = (sRows: ReadonlyArray<SetsumeiRow>): SaimokuRecord => {
+/** Parse 細目 level (indent 4) → leaf Setsumei node */
+const parseSaimoku = (sRows: ReadonlyArray<SetsumeiRow>): Setsumei => {
   const { name } = splitCodeName(sRows[0]!.text);
   const amount = safeNum(sRows[0]!.row, COL.BL);
-  return { name, 金額: amount };
+  return { code: null, name, amount, children: [] };
 };
 
-const parseJigyou = (jRows: ReadonlyArray<SetsumeiRow>): JigyouRecord => {
+/** Parse 事業 level (indent 1) → Setsumei node with saimoku children */
+const parseJigyo = (jRows: ReadonlyArray<SetsumeiRow>): Setsumei => {
   const head = jRows[0]!;
   const { code, name } = splitCodeName(head.text);
   const amount = safeNum(head.row, COL.BN);
   const saimokuChunks = splitAt(jRows.slice(1), (r) => r.level === 4);
-  const 細目 = saimokuChunks
+  const children = saimokuChunks
     .filter((chunk) => chunk[0]?.level === 4)
     .map(parseSaimoku);
-  return { 事業_code: code, 事業_name: name, 金額: amount, 細目 };
+  return { code, name, amount, children };
 };
 
-const parseDaijigyou = (dRows: ReadonlyArray<SetsumeiRow>): DaijigyouRecord => {
+/** Parse 大事業 level (indent 0) → Setsumei node with jigyo children */
+const parseDaijigyo = (dRows: ReadonlyArray<SetsumeiRow>): Setsumei => {
   const head = dRows[0]!;
   const { code, name } = splitCodeName(head.text);
   const amount = safeNum(head.row, COL.BR);
-  const jigyouChunks = splitAt(dRows.slice(1), (r) => r.level === 1);
-  const 事業 = jigyouChunks
+  const jigyoChunks = splitAt(dRows.slice(1), (r) => r.level === 1);
+  const children = jigyoChunks
     .filter((chunk) => chunk[0]?.level === 1)
-    .map(parseJigyou);
-  return { 大事業_code: code, 大事業_name: name, 金額: amount, 事業 };
+    .map(parseJigyo);
+  return { code, name, amount, children };
 };
 
 /** Extract 説明 tree from a 目 chunk */
-export const extractSetsumei = (rows: ReadonlyArray<Row>): ReadonlyArray<DaijigyouRecord> => {
+export const extractSetsumei = (rows: ReadonlyArray<Row>): ReadonlyArray<Setsumei> => {
   const sRows = toSetsumeiRows(rows);
   const daiChunks = splitAt(sRows, (r) => r.level === 0);
   return daiChunks
     .filter((chunk) => chunk[0]?.level === 0)
-    .map(parseDaijigyou);
+    .map(parseDaijigyo);
 };
-
-// ── Flatten tree for output ──
-
-export const flattenSetsumeiTree = (
-  tree: ReadonlyArray<DaijigyouRecord>,
-): ReadonlyArray<FlatSetsumeiRecord> =>
-  tree.flatMap((dai) =>
-    dai.事業.length === 0
-      ? [{
-          大事業_code: dai.大事業_code,
-          大事業_name: dai.大事業_name,
-          大事業_金額: dai.金額,
-          事業_code: null,
-          事業_name: "",
-          事業_金額: null,
-          細目_name: null,
-          細目_金額: null,
-        }]
-      : dai.事業.flatMap((ji) =>
-          ji.細目.length === 0
-            ? [{
-                大事業_code: dai.大事業_code,
-                大事業_name: dai.大事業_name,
-                大事業_金額: dai.金額,
-                事業_code: ji.事業_code,
-                事業_name: ji.事業_name,
-                事業_金額: ji.金額,
-                細目_name: null,
-                細目_金額: null,
-              }]
-            : ji.細目.map((sai) => ({
-                大事業_code: dai.大事業_code,
-                大事業_name: dai.大事業_name,
-                大事業_金額: dai.金額,
-                事業_code: ji.事業_code,
-                事業_name: ji.事業_name,
-                事業_金額: ji.金額,
-                細目_name: sai.name,
-                細目_金額: sai.金額,
-              })),
-        ),
-  );

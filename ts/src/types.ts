@@ -51,120 +51,71 @@ export const COL = {
   BR: 70, // 大事業金額
 } as const;
 
-// ── 目メタデータ ──
+// ── Domain model ──
 
-export type MokuMeta = Readonly<{
-  本年度: number | null;
-  前年度: number | null;
-  比較: number | null;
-  国県支出金: number | null;
-  地方債: number | null;
-  その他: number | null;
-  一般財源: number | null;
-}>;
-
-// ── 節レコード ──
-
-export type SaisetsuRecord = Readonly<{
+export type Kan = Readonly<{
+  code: KanCode;
   name: string;
-  金額: number | null;
+  kou: ReadonlyArray<Kou>;
 }>;
 
-export type SetsuRecord = Readonly<{
-  節_code: SetsuCode;
-  節_name: string;
-  金額: number | null;
-  細節: ReadonlyArray<SaisetsuRecord>;
-}>;
-
-// ── 説明ツリー ──
-
-export type SaimokuRecord = Readonly<{
+export type Kou = Readonly<{
+  code: KouCode;
   name: string;
-  金額: number | null;
+  moku: ReadonlyArray<Moku>;
 }>;
 
-export type JigyouRecord = Readonly<{
-  事業_code: string | null;
-  事業_name: string;
-  金額: number | null;
-  細目: ReadonlyArray<SaimokuRecord>;
+export type Moku = Readonly<{
+  code: MokuCode;
+  name: string;
+  honendo: number | null;
+  zenendo: number | null;
+  hikaku: number | null;
+  kokuken_shishutukin: number | null;
+  chihousai: number | null;
+  sonota: number | null;
+  ippan_zaigen: number | null;
+  setsu: ReadonlyArray<Setsu>;
+  setsumei: ReadonlyArray<Setsumei>;
 }>;
 
-export type DaijigyouRecord = Readonly<{
-  大事業_code: string | null;
-  大事業_name: string;
-  金額: number | null;
-  事業: ReadonlyArray<JigyouRecord>;
+export type Setsu = Readonly<{
+  code: SetsuCode;
+  name: string;
+  amount: number | null;
+  children: ReadonlyArray<Setsu>;
 }>;
 
-// ── チャンク型 ──
+export type Setsumei = Readonly<{
+  code: string | null;
+  name: string;
+  amount: number | null;
+  children: ReadonlyArray<Setsumei>;
+}>;
+
+/** Budget amounts attached to a Moku (subset for pipeline use) */
+export type MokuBudget = Pick<Moku, "honendo" | "zenendo" | "hikaku" | "kokuken_shishutukin" | "chihousai" | "sonota" | "ippan_zaigen">;
+
+// ── Parser intermediate types ──
 
 export type KouChunk = Readonly<{
-  項_code: KouCode;
-  項_name: string;
+  code: KouCode;
+  name: string;
   rows: ReadonlyArray<Row>;
 }>;
 
 export type MokuChunk = Readonly<{
-  目_code: MokuCode;
-  目_name: string;
-  meta: MokuMeta;
+  code: MokuCode;
+  name: string;
+  budget: MokuBudget;
   rows: ReadonlyArray<Row>;
 }>;
 
-// ── 組み立て済みレコード ──
-
-export type Context = Readonly<{
-  款_code: KanCode;
-  款_name: string;
-  項_code: KouCode;
-  項_name: string;
-  目_code: MokuCode;
-  目_name: string;
-}>;
-
-export type MokuOutput = Readonly<
-  Context & MokuMeta
->;
-
-export type SetsuOutput = Readonly<
-  Context & {
-    節_code: SetsuCode;
-    節_name: string;
-    金額: number | null;
-    細節: ReadonlyArray<SaisetsuRecord>;
-  }
->;
-
-export type FlatSetsumeiRecord = Readonly<{
-  大事業_code: string | null;
-  大事業_name: string;
-  大事業_金額: number | null;
-  事業_code: string | null;
-  事業_name: string;
-  事業_金額: number | null;
-  細目_name: string | null;
-  細目_金額: number | null;
-}>;
-
-export type SetsumeiOutput = Readonly<
-  Context & FlatSetsumeiRecord
->;
-
-// ── パース結果 ──
-
-export type ParseResult = Readonly<{
-  目: ReadonlyArray<MokuOutput>;
-  節: ReadonlyArray<SetsuOutput>;
-  説明: ReadonlyArray<SetsumeiOutput>;
-}>;
-
-// ── 検算エラー ──
+// ── Validation ──
 
 export type ValidationError = Readonly<{
   type: "setsu_sum_mismatch" | "setsumei_sum_mismatch" | "kou_sum_mismatch";
-  context: Context;
+  context: Readonly<{ kan_code: KanCode; kan_name: string; kou_code: KouCode; kou_name: string; moku_code: MokuCode; moku_name: string }>;
   expected: number;
   actual: number;
 }>;

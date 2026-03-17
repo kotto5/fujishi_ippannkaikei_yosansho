@@ -5,7 +5,7 @@
  * Handles both string "1" and number 1 in AL column.
  */
 
-import { COL, type Row, type SaisetsuRecord, type SetsuCode, type SetsuRecord } from "./types";
+import { COL, type Row, type Setsu, type SetsuCode } from "./types";
 import { cellCode, cellIsNumber, cellNum, cellStr } from "./util";
 
 const hasSetsuCode = (row: Row): boolean =>
@@ -23,15 +23,15 @@ const splitAtSetsuBoundaries = (rows: ReadonlyArray<Row>): ReadonlyArray<Readonl
   });
 };
 
-/** Parse a single 節 chunk into a SetsuRecord */
-const parseSetsuChunk = (chunk: ReadonlyArray<Row>): SetsuRecord => {
+/** Parse a single 節 chunk into a Setsu */
+const parseSetsuChunk = (chunk: ReadonlyArray<Row>): Setsu => {
   const head = chunk[0]!;
   const code = cellCode(head, COL.AL)! as SetsuCode;
   const nameHead = cellStr(head, COL.AN);
   const amount = cellIsNumber(head, COL.AQ) ? cellNum(head, COL.AQ) : null;
 
-  const { nameParts, saisetsu } = chunk.slice(1).reduce<
-    Readonly<{ nameParts: ReadonlyArray<string>; saisetsu: ReadonlyArray<SaisetsuRecord> }>
+  const { nameParts, children } = chunk.slice(1).reduce<
+    Readonly<{ nameParts: ReadonlyArray<string>; children: ReadonlyArray<Setsu> }>
   >(
     (acc, row) => {
       const an = cellStr(row, COL.AN);
@@ -41,19 +41,19 @@ const parseSetsuChunk = (chunk: ReadonlyArray<Row>): SetsuRecord => {
         ? acc
         : !aqIsNum
           ? { ...acc, nameParts: [...acc.nameParts, an] }
-          : { ...acc, saisetsu: [...acc.saisetsu, { name: an, 金額: aq }] };
+          : { ...acc, children: [...acc.children, { code: 0 as SetsuCode, name: an, amount: aq, children: [] }] };
     },
-    { nameParts: [], saisetsu: [] },
+    { nameParts: [], children: [] },
   );
 
   return {
-    節_code: code,
-    節_name: [nameHead, ...nameParts].join(""),
-    金額: amount,
-    細節: saisetsu,
+    code,
+    name: [nameHead, ...nameParts].join(""),
+    amount,
+    children,
   };
 };
 
 /** Extract all 節 records from a 目 chunk */
-export const extractSetsu = (rows: ReadonlyArray<Row>): ReadonlyArray<SetsuRecord> =>
+export const extractSetsu = (rows: ReadonlyArray<Row>): ReadonlyArray<Setsu> =>
   splitAtSetsuBoundaries(rows).map(parseSetsuChunk);

@@ -3,7 +3,7 @@
  *
  * E列(col 5)に "N項　XXX" パターンが出現する行を境界とする。
  * 同じ項番号の繰り返し（ページヘッダーによる再表示）は無視し、
- * 項_code が変化した行だけを真の境界とする。
+ * kou_code が変化した行だけを真の境界とする。
  *
  * Full-width digits (１, ２, ...) are normalized before matching.
  */
@@ -20,7 +20,7 @@ type KouBoundary = Readonly<{
   name: string;
 }>;
 
-/** Find all 項 boundary rows where 項_code changes */
+/** Find all 項 boundary rows where kou_code changes */
 const findKouBoundaries = (rows: ReadonlyArray<Row>): ReadonlyArray<KouBoundary> =>
   rows.reduce<ReadonlyArray<KouBoundary>>((acc, row, index) => {
     const eVal = normalizeDigits(cellStr(row, COL.E));
@@ -44,8 +44,8 @@ export const splitByKou = (rows: ReadonlyArray<Row>): ReadonlyArray<KouChunk> =>
       ? boundaries[i + 1]!.index
       : rows.length;
     return {
-      項_code: boundary.code,
-      項_name: boundary.name,
+      code: boundary.code,
+      name: boundary.name,
       rows: rows.slice(boundary.index, nextIndex),
     };
   });

@@ -24,16 +24,15 @@ const main = (): void => {
       result.errors
         .map(
           (e) =>
-            `[${e.type}] ${e.context.款_name}/${e.context.項_name}/${e.context.目_name}: expected=${e.expected}, actual=${e.actual}`,
+            `[${e.type}] ${e.context.kan_name}/${e.context.kou_name}/${e.context.moku_name}: expected=${e.expected}, actual=${e.actual}`,
         )
         .join("\n") +
       "\n",
     );
 
   // Summary to stderr
-  process.stderr.write(
-    `\nParsed: ${result.data.目.length} 目, ${result.data.節.length} 節, ${result.data.説明.length} 説明\n`,
-  );
+  const mokuCount = result.data.reduce((acc, kan) => acc + kan.kou.reduce((a, kou) => a + kou.moku.length, 0), 0);
+  process.stderr.write(`\nParsed: ${result.data.length} 款, ${mokuCount} 目\n`);
   process.stderr.write(`Validation errors: ${result.errors.length}\n`);
 
   // Structured data to stdout

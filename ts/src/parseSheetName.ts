@@ -8,15 +8,15 @@
 import type { KanCode } from "./types";
 import { normalizeDigits } from "./util";
 
-/** Parse sheet name like "２款＿総務費" → { 款_code, 款_name } */
+/** Parse sheet name like "２款＿総務費" → { kan_code, kan_name } */
 export const parseSheetName = (
   sheetName: string,
-): Readonly<{ 款_code: KanCode; 款_name: string }> => {
+): Readonly<{ kan_code: KanCode; kan_name: string }> => {
   const match = sheetName.match(/^(.+?)款＿(.+?)$/);
   return match === null
     ? (() => { throw new Error(`Invalid sheet name: ${sheetName}`); })()
     : {
-        款_code: parseInt(normalizeDigits(match[1]!.trim()), 10) as KanCode,
-        款_name: match[2]!,
+        kan_code: parseInt(normalizeDigits(match[1]!.trim()), 10) as KanCode,
+        kan_name: match[2]!,
       };
 };
