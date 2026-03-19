@@ -72,62 +72,27 @@ const isHeaderText = (s: string): boolean => {
 };
 
 /** Extract AT-column rows with indent classification */
-const toSetsumeiRows = (rows: ReadonlyArray<Row>): ReadonlyArray<SetsumeiRow> =>
-  rows
-    .filter((row) => {
-      const raw = cellRaw(row, COL.AT).trim();
-      return raw.length > 0 && !isHeaderText(raw);
-    })
-    .map((row) => {
+const toSetsumeiRows = (rows: ReadonlyArray<Row>): ReadonlyArray<SetsumeiRow> => {
+  const { result } = rows.reduce<{ result: SetsumeiRow[]; skipNext: boolean }>(
+    ({ result, skipNext }, row, index, arr) => {
+      if (skipNext) return { result, skipNext: false };
+
       const raw = cellRaw(row, COL.AT);
-      const spaces = countLeadingZenkakuSpaces(raw);
-      return { level: classifyIndent(spaces), text: raw, row };
-    });
+      if (raw.length <= 0 || isHeaderText(raw)) return { result, skipNext: false };
 
-// ── Chunk splitting ──
+      const countSpaces = countLeadingZenkakuSpaces(raw);
+      const nextRow = arr[index + 1];
+      const nextraw = nextRow ? cellRaw(nextRow, COL.AT).trim() : "";
+      const text = raw.trim() + nextraw;
 
-/** Split array at positions where predicate is true */
-const splitAt = <T>(items: ReadonlyArray<T>, pred: (item: T) => boolean): ReadonlyArray<ReadonlyArray<T>> =>
-  items.reduce<ReadonlyArray<ReadonlyArray<T>>>((acc, item) =>
-    pred(item)
-      ? [...acc, [item]]
-      : acc.length === 0
-        ? [[item]]
-        : [...acc.slice(0, -1), [...acc[acc.length - 1]!, item]],
-    [],
+      return {
+        result: [...result, { indent: countSpaces, text }],
+        skipNext: nextraw.length > 0,
+      };
+    },
+    { result: [], skipNext: false }
   );
-
-// ── Tree construction using domain Setsumei type ──
-
-/** Parse 細目 level (indent 4) → leaf Setsumei node */
-const parseSaimoku = (sRows: ReadonlyArray<SetsumeiRow>): Setsumei => {
-  const { name } = splitCodeName(sRows[0]!.text);
-  const amount = safeNum(sRows[0]!.row, COL.BL);
-  return { code: null, name, amount, children: [] };
-};
-
-/** Parse 事業 level (indent 1) → Setsumei node with saimoku children */
-const parseJigyo = (jRows: ReadonlyArray<SetsumeiRow>): Setsumei => {
-  const head = jRows[0]!;
-  const { code, name } = splitCodeName(head.text);
-  const amount = safeNum(head.row, COL.BN);
-  const saimokuChunks = splitAt(jRows.slice(1), (r) => r.level === 4);
-  const children = saimokuChunks
-    .filter((chunk) => chunk[0]?.level === 4)
-    .map(parseSaimoku);
-  return { code, name, amount, children };
-};
-
-/** Parse 大事業 level (indent 0) → Setsumei node with jigyo children */
-const parseDaijigyo = (dRows: ReadonlyArray<SetsumeiRow>): Setsumei => {
-  const head = dRows[0]!;
-  const { code, name } = splitCodeName(head.text);
-  const amount = safeNum(head.row, COL.BR);
-  const jigyoChunks = splitAt(dRows.slice(1), (r) => r.level === 1);
-  const children = jigyoChunks
-    .filter((chunk) => chunk[0]?.level === 1)
-    .map(parseJigyo);
-  return { code, name, amount, children };
+  return result;
 };
 
 /** Extract 説明 tree from a 目 chunk */
