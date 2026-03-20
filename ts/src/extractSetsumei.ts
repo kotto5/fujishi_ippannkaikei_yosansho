@@ -98,33 +98,35 @@ const toSetsumeiRows = (rows: ReadonlyArray<Row>): ReadonlyArray<SetsumeiRow> =>
   return result;
 };
 
+// Setsumei から children だけ mutable に差し替えた内部作業用型
+type MutableSetsumei = Omit<Setsumei, "children"> & { children: MutableSetsumei[] };
+
+const freeze = (node: MutableSetsumei): Setsumei => ({
+  ...node,
+  children: node.children.map(freeze),
+});
+
 const buildTree = (arr: ReadonlyArray<SetsumeiRow>): ReadonlyArray<Setsumei> => {
-  const root : Setsumei = { code: null, name: "root", amount: null, children: [] };
+  const root: MutableSetsumei = { code: null, name: "root", amount: null, children: [] };
   // スタックに { node, indent } を積む
-  const stack = [{ node: root, indent: -1 }];
+  const stack: { node: MutableSetsumei; indent: number }[] = [{ node: root, indent: -1 }];
 
   for (const line of arr) {
-    const indent = line.indent;
-    const name = line.name;
-    const code = line.code;
-    const amount = line.amount;
-    const node = { name, children: [], code, amount };
+    const node: MutableSetsumei = { code: line.code, name: line.name, amount: line.amount, children: [] };
 
     // インデントが自分以下になるまでスタックを巻き戻す
-    const index = stack.length - 1;
-    while (stack[index].indent >= indent) {
+    while (stack[stack.length - 1]!.indent >= line.indent) {
       stack.pop();
     }
 
     // スタックのトップが親
-    const parent = stack[index]?.node;
-    parent.children.push(node);
+    stack[stack.length - 1]!.node.children.push(node);
 
     // 自分をスタックに積む（次の要素の親候補になる）
-    stack.push({ node, indent });
+    stack.push({ node, indent: line.indent });
   }
 
-  return root.children;
+  return root.children.map(freeze);
 }
 
 /** Extract 説明 tree from a 目 chunk */
