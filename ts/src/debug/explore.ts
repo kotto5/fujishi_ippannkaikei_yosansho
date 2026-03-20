@@ -4,8 +4,8 @@
  */
 
 import { readFileSync } from "node:fs";
-import { readBudgetExcel } from "./excel";
-import { COL } from "./types";
+import { readBudgetExcel } from "../lib/excel";
+import { COL } from "../lib/types";
 
 const inputPath = process.argv[2] ?? "../inputs/r8.xlsx";
 const buffer = readFileSync(inputPath);

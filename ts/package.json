@@ -7,7 +7,10 @@
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "explore": "tsx src/explore.ts"
+    "explore": "tsx src/explore.ts",
+    "parse:r7": "tsx src/main.ts ../inputs/r7.xlsx > r7.json",
+    "parse:r8": "tsx src/main.ts ../inputs/r8.xlsx > r8.json",
+    "merge": "tsx src/merge.ts r7.json r8.json > output.json"
   },
   "dependencies": {
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",

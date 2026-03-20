@@ -7,7 +7,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { parseBudgetExcel } from "./pipeline";
+import { parseBudgetExcel } from "../lib/pipeline";
 
 const main = (): void => {
   const inputPath = process.argv[2];

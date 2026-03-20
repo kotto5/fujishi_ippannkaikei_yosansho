@@ -10,7 +10,7 @@
 
 import { readFileSync } from "node:fs";
 import { basename, extname } from "node:path";
-import type { Kan, Year } from "./types";
+import type { Kan, Year } from "../lib/types";
 
 const paths = process.argv.slice(2);
 

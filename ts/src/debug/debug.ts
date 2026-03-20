@@ -13,15 +13,15 @@
 
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { readBudgetExcel } from "./excel";
-import { extractSetsu } from "./extractSetsu";
-import { extractSetsumei } from "./extractSetsumei";
-import { parseSheetName } from "./parseSheetName";
-import { splitByKou } from "./splitByKou";
-import { splitByMoku } from "./splitByMoku";
-import { isHeaderRow, stripHeaders } from "./stripHeaders";
-import { COL, type Row } from "./types";
-import { cellStr, cellNum, cellIsNumber, cellRaw } from "./util";
+import { readBudgetExcel } from "../lib/excel";
+import { extractSetsu } from "../lib/extractSetsu";
+import { extractSetsumei } from "../lib/extractSetsumei";
+import { parseSheetName } from "../lib/parseSheetName";
+import { splitByKou } from "../lib/splitByKou";
+import { splitByMoku } from "../lib/splitByMoku";
+import { isHeaderRow, stripHeaders } from "../lib/stripHeaders";
+import { COL, type Row } from "../lib/types";
+import { cellStr, cellNum, cellIsNumber, cellRaw } from "../lib/util";
 
 const inputBasename = (process.argv[2] ?? "unknown").replace(/^.*\//, "").replace(/\.[^.]+$/, "");
 const OUT_DIR = join(import.meta.dirname ?? ".", "..", "..", "outputs", "debug", inputBasename);
