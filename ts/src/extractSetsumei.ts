@@ -23,6 +23,8 @@ import { cellIsNumber, cellRaw } from "./util";
 
 // ── Indent detection ──
 
+const ZENKAKU_SPACE = "\u3000";
+
 /** Count leading full-width spaces (U+3000) */
 const countLeadingZenkakuSpaces = (s: string): number => {
   const m = s.match(/^(\u3000*)/);
@@ -30,17 +32,6 @@ const countLeadingZenkakuSpaces = (s: string): number => {
 };
 
 type IndentLevel = 0 | 1 | 4 | "continuation";
-
-const classifyIndent = (spaces: number): IndentLevel =>
-  match(spaces)
-    .with(0, () => 0 as const)
-    .with(1, () => 1 as const)
-    .with(2, () => "continuation" as const) // 注釈テキスト（括弧書き等）
-    .with(3, () => "continuation" as const) // 注釈テキスト（定数/定数外等）
-    .with(4, () => 4 as const)
-    .otherwise(() => "continuation" as const);
-
-// ── Code/name splitting ──
 
 const CODE_NAME_PATTERN = /^(\d+)\s+(.+)$/;
 
@@ -113,11 +104,37 @@ const toSetsumeiRows = (rows: ReadonlyArray<Row>): ReadonlyArray<SetsumeiRow> =>
   return result;
 };
 
+const buildTree = (arr: ReadonlyArray<SetsumeiRow>): ReadonlyArray<Setsumei> => {
+  const root : Setsumei = { code: null, name: "root", amount: null, children: [] };
+  // スタックに { node, indent } を積む
+  const stack = [{ node: root, indent: -1 }];
+
+  for (const line of arr) {
+    const indent = line.indent;
+    const name = line.name;
+    const code = line.code;
+    const amount = line.amount;
+    const node = { name, children: [], code, amount };
+
+    // インデントが自分以下になるまでスタックを巻き戻す
+    const index = stack.length - 1;
+    while (stack[index].indent >= indent) {
+      stack.pop();
+    }
+
+    // スタックのトップが親
+    const parent = stack[index]?.node;
+    parent.children.push(node);
+
+    // 自分をスタックに積む（次の要素の親候補になる）
+    stack.push({ node, indent });
+  }
+
+  return root.children;
+}
+
 /** Extract 説明 tree from a 目 chunk */
 export const extractSetsumei = (rows: ReadonlyArray<Row>): ReadonlyArray<Setsumei> => {
-  const sRows = toSetsumeiRows(rows);
-  const daiChunks = splitAt(sRows, (r) => r.level === 0);
-  return daiChunks
-    .filter((chunk) => chunk[0]?.level === 0)
-    .map(parseDaijigyo);
+  const lines = toSetsumeiRows(rows);
+  return buildTree(lines);
 };
