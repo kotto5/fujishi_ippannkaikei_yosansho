@@ -62,7 +62,7 @@ const flattenYear = (year: Year): ReadonlyArray<ExportDataRow> =>
       ...kou.moku.flatMap(moku => {
         const ctx = { kan_name: kan.name, kou_name: kou.name, moku_name: moku.name, year: year.year };
         return [
-          { ...ctx, amount: moku.honendo ?? 0 } satisfies ExportDataMokuRow,
+          { ...ctx, amount: moku.honendo } satisfies ExportDataMokuRow,
           ...moku.setsu.flatMap(flattenSetsu(ctx)),
           ...moku.setsumei.flatMap(flattenSetsumei(ctx)),
         ];
