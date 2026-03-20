@@ -39,7 +39,78 @@ export const COL = {
   RIGHTMOST: 76, // 右端 BY
 } as const;
 
+
+// 比較データ
+export type CompareRow = Readonly<{
+  kan_name: string;
+  kou_name: string;
+  moku_name: string;
+  setsu_layer1_name: string;
+  setsu_layer2_name: string;
+  setsumei_layer1_name: string;
+  setsumei_layer2_name: string;
+  setsumei_layer3_name: string;
+  // amount は year と 金額 のタプルの配列.
+  amount: ReadonlyArray<Readonly<{ year: string; amount: number | null }>>;
+}>;
+
+
+// 中間データ形式
+export type ExportDataRow =
+  | ExportDataKanRow
+  | ExportDataKouRow
+  | ExportDataMokuRow
+  | ExportDataSetsuRow
+  | ExportDataSetsumeiRow;
+
+export type ExportDataKanRow = Readonly<{
+  kan_name: string;
+  year: number;
+  amount: number;
+}>
+
+export type ExportDataKouRow = Readonly<{
+  kan_name: string;
+  kou_name: string;
+  year: number;
+  amount: number;
+}>
+
+export type ExportDataMokuRow = Readonly<{
+  kan_name: string;
+  kou_name: string;
+  moku_name: string;
+  year: number;
+  amount: number;
+}>
+
+export type ExportDataSetsuRow = Readonly<{
+  kan_name: string;
+  kou_name: string;
+  moku_name: string;
+  setsu_layer1_name: string;
+  setsu_layer2_name: string;
+  year: number;
+  amount: number | null;
+}>
+
+export type ExportDataSetsumeiRow = Readonly<{
+  kan_name: string;
+  kou_name: string;
+  moku_name: string;
+  setsumei_layer1_name: string;
+  setsumei_layer2_name: string;
+  setsumei_layer3_name: string;
+  year: number;
+  amount: number | null;
+}>
+
 // ── Domain model ──
+
+export type Year = Readonly<{
+  year: string;
+  kans: ReadonlyArray<Kan>;
+}>
 
 export type Kan = Readonly<{
   code: number;
@@ -47,11 +118,6 @@ export type Kan = Readonly<{
   // amount: number;
   kou: ReadonlyArray<Kou>;
 }>;
-
-export type Year = Readonly<{
-  year: string;
-  kans: ReadonlyArray<Kan>;
-}>
 
 export type Kou = Readonly<{
   code: number;

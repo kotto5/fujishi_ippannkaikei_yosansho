@@ -1,19 +1,24 @@
 /**
- * CLI entry point: stdin (Excel buffer) → stdout (JSON)
+ * CLI entry point: Excel file → stdout (Year JSON)
  *
  * Unix pipe abstraction: accepts byte stream, emits structured data.
- * Usage: cat inputs/r8.xlsx | npx tsx src/main.ts
- *    or: npx tsx src/main.ts < inputs/r8.xlsx
+ * Usage: npx tsx src/main.ts inputs/r8.xlsx
+ *    or: cat inputs/r8.xlsx | npx tsx src/main.ts r8
+ *
+ * argv[2]: file path (year derived from basename) OR year label for stdin
  */
 
 import { readFileSync } from "node:fs";
+import { basename, extname } from "node:path";
 import { parseBudgetExcel } from "../lib/pipeline";
+import type { Year } from "../lib/types";
 
 const main = (): void => {
-  const inputPath = process.argv[2];
-  const buffer = inputPath !== undefined
-    ? readFileSync(inputPath)
-    : readFileSync("/dev/stdin");
+  const arg = process.argv[2];
+  const isFilePath = arg !== undefined && arg.includes(".");
+  const [buffer, year] = isFilePath
+    ? [readFileSync(arg), basename(arg, extname(arg))] as const
+    : [readFileSync("/dev/stdin"), arg ?? "unknown"] as const;
 
   const { value: kans, errors } = parseBudgetExcel(buffer as Buffer);
 
@@ -36,7 +41,8 @@ const main = (): void => {
   process.stderr.write(`Validation errors: ${errors.length}\n`);
 
   // Structured data to stdout
-  process.stdout.write(JSON.stringify(kans, null, 2));
+  const output: Year = { year, kans };
+  process.stdout.write(JSON.stringify(output, null, 2));
 };
 
 main();
