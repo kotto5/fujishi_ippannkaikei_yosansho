@@ -130,7 +130,6 @@ const buildTree = (arr: ReadonlyArray<SetsumeiRow>): ReadonlyArray<Setsumei> => 
 }
 
 /** Extract 説明 tree from a 目 chunk */
-export const extractSetsumei = (rows: ReadonlyArray<Row>): ReadonlyArray<Setsumei> => {
-  const lines = toSetsumeiRows(rows);
-  return buildTree(lines);
-};
+export const extractSetsumei = (rows: ReadonlyArray<Row>): ReadonlyArray<Setsumei> => 
+  buildTree(toSetsumeiRows(rows));
+
