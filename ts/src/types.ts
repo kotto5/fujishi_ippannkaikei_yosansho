@@ -48,6 +48,11 @@ export type Kan = Readonly<{
   kou: ReadonlyArray<Kou>;
 }>;
 
+export type Year = Readonly<{
+  year: string;
+  kans: ReadonlyArray<Kan>;
+}>
+
 export type Kou = Readonly<{
   code: number;
   name: string;
