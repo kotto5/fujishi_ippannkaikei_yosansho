@@ -13,7 +13,6 @@
  * → 金額列は typeof === "number" で判定（文字列は無視）。
  */
 
-import { match } from "ts-pattern";
 import {
   COL,
   type Row,
@@ -57,12 +56,6 @@ type SetsumeiRow = Readonly<{
   amount: number | null;
 }>;
 
-type NodeLevel = Exclude<IndentLevel, "continuation">;
-
-type ParseResult = Readonly<{
-  nodes: ReadonlyArray<Setsumei>;
-}>;
-
 /** Check if AT text is a header remnant (e.g. "説　　明" with internal spaces) */
 const isHeaderText = (s: string): boolean => {
   const collapsed = s.replace(/[\u3000\s]+/g, "");
@@ -86,10 +79,11 @@ const toSetsumeiRows = (rows: ReadonlyArray<Row>): ReadonlyArray<SetsumeiRow> =>
       const { code, name } = splitCodeName(text);
 
       for (let i = COL.AT + 1; i < COL.RIGHTMOST; i++) {
-        if (cellIsNumber(row, i)) {
+        const amount = safeNum(row, i);
+        if (amount !== null) {
           return {
-            result: [...result, { indent: countSpaces, code, name, amount: row[i] as number }],
-            skipNext: true,
+            result: [...result, { indent: countSpaces, code, name, amount }],
+            skipNext: i === COL.BR, // 大事業金額があれば次行は説明の続きの可能性が高いのでスキップする
           };
         }
       }
