@@ -1,12 +1,14 @@
 /**
  * Step 4a: 目チャンク → 節の抽出
  *
- * AL列(col 38)に数値的な値がある行を節の先頭として分割。
- * Handles both string "1" and number 1 in AL column.
+ * AL列(col 38)に数値的な値がある行を節の先頭(indent 0)として分割。
+ * 同一チャンク内でAQ列に数値を持つ行は子ノード(indent 1)として扱う。
+ * AN列のみ持つ行は先頭ノードの名称継続行として結合する。
  */
 
-import { COL, type Row, type Setsu, type SetsuCode } from "./types";
+import { COL, type Row, type Setsu } from "./types";
 import { cellCode, cellIsNumber, cellNum, cellStr } from "./util";
+import { buildTree, type TreeRow } from "./treeBuilder";
 
 const hasSetsuCode = (row: Row): boolean =>
   cellCode(row, COL.AL) !== null;
@@ -23,15 +25,20 @@ const splitAtSetsuBoundaries = (rows: ReadonlyArray<Row>): ReadonlyArray<Readonl
   });
 };
 
-/** Parse a single 節 chunk into a Setsu */
-const parseSetsuChunk = (chunk: ReadonlyArray<Row>): Setsu => {
+/**
+ * Convert a single 節 chunk into TreeRows.
+ * - Head row  → indent 0, code from AL, name from AN (merged with continuation rows)
+ * - Child row → indent 1, code null, name from AN, amount from AQ
+ */
+const chunkToTreeRows = (chunk: ReadonlyArray<Row>): ReadonlyArray<TreeRow> => {
   const head = chunk[0]!;
-  const code = cellCode(head, COL.AL)! as SetsuCode;
+  const codeNum = cellCode(head, COL.AL);
+  const code = codeNum !== null ? String(codeNum) : null;
   const nameHead = cellStr(head, COL.AN);
   const amount = cellIsNumber(head, COL.AQ) ? cellNum(head, COL.AQ) : null;
 
   const { nameParts, children } = chunk.slice(1).reduce<
-    Readonly<{ nameParts: ReadonlyArray<string>; children: ReadonlyArray<Setsu> }>
+    Readonly<{ nameParts: ReadonlyArray<string>; children: ReadonlyArray<TreeRow> }>
   >(
     (acc, row) => {
       const an = cellStr(row, COL.AN);
@@ -41,19 +48,18 @@ const parseSetsuChunk = (chunk: ReadonlyArray<Row>): Setsu => {
         ? acc
         : !aqIsNum
           ? { ...acc, nameParts: [...acc.nameParts, an] }
-          : { ...acc, children: [...acc.children, { code: 0 as SetsuCode, name: an, amount: aq, children: [] }] };
+          : { ...acc, children: [...acc.children, { indent: 1, code: null, name: an, amount: aq }] };
     },
     { nameParts: [], children: [] },
   );
 
-  return {
-    code,
-    name: [nameHead, ...nameParts].join(""),
-    amount,
-    children,
-  };
+  const headRow: TreeRow = { indent: 0, code, name: [nameHead, ...nameParts].join(""), amount };
+  return [headRow, ...children];
 };
+
+export const toSetsuRows = (rows: ReadonlyArray<Row>): ReadonlyArray<TreeRow> =>
+  splitAtSetsuBoundaries(rows).flatMap(chunkToTreeRows);
 
 /** Extract all 節 records from a 目 chunk */
 export const extractSetsu = (rows: ReadonlyArray<Row>): ReadonlyArray<Setsu> =>
-  splitAtSetsuBoundaries(rows).map(parseSetsuChunk);
+  buildTree(toSetsuRows(rows));

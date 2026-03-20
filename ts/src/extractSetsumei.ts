@@ -19,18 +19,13 @@ import {
   type Setsumei,
 } from "./types";
 import { cellIsNumber, cellRaw } from "./util";
+import { buildTree, type TreeRow } from "./treeBuilder";
 
 // ── Indent detection ──
 
-const ZENKAKU_SPACE = "\u3000";
-
 /** Count leading full-width spaces (U+3000) */
-const countLeadingZenkakuSpaces = (s: string): number => {
-  const m = s.match(/^(\u3000*)/);
-  return m?.[1]?.length ?? 0;
-};
-
-type IndentLevel = 0 | 1 | 4 | "continuation";
+const countLeadingZenkakuSpaces = (s: string): number =>
+  s.match(/^(\u3000*)/)?.[1]?.length ?? 0;
 
 const CODE_NAME_PATTERN = /^(\d+)\s+(.+)$/;
 
@@ -47,14 +42,12 @@ const splitCodeName = (text: string): Readonly<{ code: string | null; name: stri
 const safeNum = (row: Row, col: number): number | null =>
   cellIsNumber(row, col) ? (row[col] as number) : null;
 
-// ── Tagged row type ──
-
-type SetsumeiRow = Readonly<{
-  indent: number;
-  code: string | null;
-  name: string;
-  amount: number | null;
-}>;
+/** Find the first numeric amount in columns AT+1..RIGHTMOST-1, and note its column */
+const findAmount = (row: Row): Readonly<{ amount: number | null; col: number | null }> => {
+  const cols = Array.from({ length: COL.RIGHTMOST - COL.AT - 1 }, (_, k) => COL.AT + 1 + k);
+  const entry = cols.map(i => ({ col: i, amount: safeNum(row, i) })).find(e => e.amount !== null);
+  return entry ?? { amount: null, col: null };
+};
 
 /** Check if AT text is a header remnant (e.g. "説　　明" with internal spaces) */
 const isHeaderText = (s: string): boolean => {
@@ -63,8 +56,8 @@ const isHeaderText = (s: string): boolean => {
 };
 
 /** Extract AT-column rows with indent classification */
-const toSetsumeiRows = (rows: ReadonlyArray<Row>): ReadonlyArray<SetsumeiRow> => {
-  const { result } = rows.reduce<{ result: SetsumeiRow[]; skipNext: boolean }>(
+export const toSetsumeiRows = (rows: ReadonlyArray<Row>): ReadonlyArray<TreeRow> => {
+  const { result } = rows.reduce<{ result: TreeRow[]; skipNext: boolean }>(
     ({ result, skipNext }, row, index, arr) => {
       if (skipNext) return { result, skipNext: false };
 
@@ -72,25 +65,16 @@ const toSetsumeiRows = (rows: ReadonlyArray<Row>): ReadonlyArray<SetsumeiRow> =>
       if (raw.length <= 0 || isHeaderText(raw)) return { result, skipNext: false };
 
       const countSpaces = countLeadingZenkakuSpaces(raw);
-      const nextRow = arr[index + 1]; // TODO: 三行以上の説明テキストへの対応. その場合は while で次行もチェックする必要がある. skipNext ではなく, skipLines: number みたいな形で管理する必要がある
+      const nextRow = arr[index + 1]; // TODO: 三行以上の説明テキストへの対応
       const nextraw = nextRow ? cellRaw(nextRow, COL.AT).trim() : "";
       const text = raw.trim() + nextraw;
-      // using splitCodeName
       const { code, name } = splitCodeName(text);
 
-      for (let i = COL.AT + 1; i < COL.RIGHTMOST; i++) {
-        const amount = safeNum(row, i);
-        if (amount !== null) {
-          return {
-            result: [...result, { indent: countSpaces, code, name, amount }],
-            skipNext: i === COL.BR, // 大事業金額があれば次行は説明の続きの可能性が高いのでスキップする
-          };
-        }
-      }
-      // TODO: 先頭行でない行に amount が書かれる場合はあるか? あるなら対応しなければならない。上行は1行目に amount がある場合の例
+      const { amount, col } = findAmount(row);
       return {
-        result: [...result, { indent: countSpaces, code, name, amount: null }],
-        skipNext: false,
+        result: [...result, { indent: countSpaces, code, name, amount }],
+        // テキストがある次の行は、続き or 空行のはずなので、skip
+        skipNext: amount !== null,
       };
     },
     { result: [], skipNext: false }
@@ -98,38 +82,6 @@ const toSetsumeiRows = (rows: ReadonlyArray<Row>): ReadonlyArray<SetsumeiRow> =>
   return result;
 };
 
-// Setsumei から children だけ mutable に差し替えた内部作業用型
-type MutableSetsumei = Omit<Setsumei, "children"> & { children: MutableSetsumei[] };
-
-const freeze = (node: MutableSetsumei): Setsumei => ({
-  ...node,
-  children: node.children.map(freeze),
-});
-
-const buildTree = (arr: ReadonlyArray<SetsumeiRow>): ReadonlyArray<Setsumei> => {
-  const root: MutableSetsumei = { code: null, name: "root", amount: null, children: [] };
-  // スタックに { node, indent } を積む
-  const stack: { node: MutableSetsumei; indent: number }[] = [{ node: root, indent: -1 }];
-
-  for (const line of arr) {
-    const node: MutableSetsumei = { code: line.code, name: line.name, amount: line.amount, children: [] };
-
-    // インデントが自分以下になるまでスタックを巻き戻す
-    while (stack[stack.length - 1]!.indent >= line.indent) {
-      stack.pop();
-    }
-
-    // スタックのトップが親
-    stack[stack.length - 1]!.node.children.push(node);
-
-    // 自分をスタックに積む（次の要素の親候補になる）
-    stack.push({ node, indent: line.indent });
-  }
-
-  return root.children.map(freeze);
-}
-
 /** Extract 説明 tree from a 目 chunk */
-export const extractSetsumei = (rows: ReadonlyArray<Row>): ReadonlyArray<Setsumei> => 
+export const extractSetsumei = (rows: ReadonlyArray<Row>): ReadonlyArray<Setsumei> =>
   buildTree(toSetsumeiRows(rows));
-

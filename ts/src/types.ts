@@ -35,10 +35,7 @@ export const COL = {
   AQ: 43, // 節金額
 
   // Stream ③ 説明レベル（右側）
-  AT: 46, // 説明テキスト
-  BL: 64, // 細目金額
-  BN: 66, // 事業金額
-  BR: 70, // 大事業金額
+  AT: 46, // 説明 Layer1
   RIGHTMOST: 76, // 右端 BY
 } as const;
 
@@ -47,12 +44,14 @@ export const COL = {
 export type Kan = Readonly<{
   code: number;
   name: string;
+  // amount: number;
   kou: ReadonlyArray<Kou>;
 }>;
 
 export type Kou = Readonly<{
   code: number;
   name: string;
+  // amount: number;
   moku: ReadonlyArray<Moku>;
 }>;
 
@@ -94,6 +93,7 @@ export type MokuBudget = Pick<Moku, "honendo" | "zenendo" | "hikaku" | "kokuken_
 export type KouChunk = Readonly<{
   code: number;
   name: string;
+  // amount: number;
   rows: ReadonlyArray<Row>;
 }>;
 

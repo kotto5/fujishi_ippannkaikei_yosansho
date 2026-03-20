@@ -52,7 +52,8 @@ const processMoku = (chunk: MokuChunk, ctx: KouCtx): WithErrors<Moku & { budget:
       setsumei: setsumeiTree,
       budget: chunk.budget,
     },
-    errors: [
+    // 予備費は節・説明が存在しない款のため、合計整合チェックをスキップする
+    errors: ctx.kan_name === "予備費" ? [] : [
       ...validateSetsuSum(mokuCtx, chunk.budget, setsuList),
       ...validateSetsumeiSum(mokuCtx, chunk.budget, setsumeiTree),
     ],
