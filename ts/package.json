@@ -9,7 +9,10 @@
     "test:watch": "vitest",
     "explore": "tsx src/explore.ts",
     "parse": "tsx src/1_parse_budget_to_json/main.ts ../inputs/r7.xlsx > r7.json && tsx src/1_parse_budget_to_json/main.ts ../inputs/r8.xlsx > r8.json",
-    "merge": "tsx src/2_merge_yearly_budget/main.ts r7.json r8.json > merged.json"
+    "merge": "tsx src/2_merge_yearly_budget/main.ts r7.json r8.json > merged.json",
+    "compare": "tsx src/3_compare_table/main.ts merged.json > compare.json",
+    "csv": "tsx src/4_to_csv/main.ts compare.json > compare.csv",
+    "all": "npm run parse && npm run merge && npm run compare && npm run csv"
   },
   "dependencies": {
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",

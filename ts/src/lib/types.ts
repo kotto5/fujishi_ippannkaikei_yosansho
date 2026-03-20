@@ -108,7 +108,7 @@ export type ExportDataSetsumeiRow = Readonly<{
 // ── Domain model ──
 
 export type Year = Readonly<{
-  year: string;
+  year: number;
   kans: ReadonlyArray<Kan>;
 }>
 

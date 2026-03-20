@@ -13,12 +13,16 @@ import { basename, extname } from "node:path";
 import { parseBudgetExcel } from "../lib/pipeline";
 import type { Year } from "../lib/types";
 
+// "r7" → 2025, "r8" → 2026（令和年 + 2018）
+const reiwaToYear = (label: string): number =>
+  2018 + parseInt(label.replace(/^r/, ""), 10);
+
 const main = (): void => {
   const arg = process.argv[2];
   const isFilePath = arg !== undefined && arg.includes(".");
   const [buffer, year] = isFilePath
-    ? [readFileSync(arg), basename(arg, extname(arg))] as const
-    : [readFileSync("/dev/stdin"), arg ?? "unknown"] as const;
+    ? [readFileSync(arg), reiwaToYear(basename(arg, extname(arg)))] as const
+    : [readFileSync("/dev/stdin"), reiwaToYear(arg ?? "0")] as const;
 
   const { value: kans, errors } = parseBudgetExcel(buffer as Buffer);
 
