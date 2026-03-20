@@ -5,16 +5,6 @@
  * Hierarchy: 款(kan) → 項(kou) → 目(moku) → 節(setsu) / 説明(setsumei)
  */
 
-// ── Branded types for type-safe IDs ──
-
-declare const __brand: unique symbol;
-type Brand<T, B extends string> = T & { readonly [__brand]: B };
-
-export type KanCode = Brand<number, "KanCode">;
-export type KouCode = Brand<number, "KouCode">;
-export type MokuCode = Brand<number, "MokuCode">;
-export type SetsuCode = Brand<number, "SetsuCode">;
-
 // ── Cell value: what SheetJS gives us after merge resolution ──
 
 export type CellValue = string | number | boolean | undefined;
@@ -49,24 +39,25 @@ export const COL = {
   BL: 64, // 細目金額
   BN: 66, // 事業金額
   BR: 70, // 大事業金額
+  RIGHTMOST: 76, // 右端 BY
 } as const;
 
 // ── Domain model ──
 
 export type Kan = Readonly<{
-  code: KanCode;
+  code: number;
   name: string;
   kou: ReadonlyArray<Kou>;
 }>;
 
 export type Kou = Readonly<{
-  code: KouCode;
+  code: number;
   name: string;
   moku: ReadonlyArray<Moku>;
 }>;
 
 export type Moku = Readonly<{
-  code: MokuCode;
+  code: number;
   name: string;
   honendo: number | null;
   zenendo: number | null;
@@ -80,11 +71,13 @@ export type Moku = Readonly<{
 }>;
 
 export type Setsu = Readonly<{
-  code: SetsuCode;
+  code: string | null;
   name: string;
   amount: number | null;
   children: ReadonlyArray<Setsu>;
 }>;
+
+export type SetsuLayer2 = Readonly<Omit<Setsu, "code" | "children">>;
 
 export type Setsumei = Readonly<{
   code: string | null;
@@ -99,13 +92,13 @@ export type MokuBudget = Pick<Moku, "honendo" | "zenendo" | "hikaku" | "kokuken_
 // ── Parser intermediate types ──
 
 export type KouChunk = Readonly<{
-  code: KouCode;
+  code: number;
   name: string;
   rows: ReadonlyArray<Row>;
 }>;
 
 export type MokuChunk = Readonly<{
-  code: MokuCode;
+  code: number;
   name: string;
   budget: MokuBudget;
   rows: ReadonlyArray<Row>;
@@ -113,9 +106,9 @@ export type MokuChunk = Readonly<{
 
 // ── Hierarchical context: each level extends the parent ──
 
-export type KanCtx = Readonly<{ kan_code: KanCode; kan_name: string }>;
-export type KouCtx = KanCtx & Readonly<{ kou_code: KouCode; kou_name: string }>;
-export type MokuCtx = KouCtx & Readonly<{ moku_code: MokuCode; moku_name: string }>;
+export type KanCtx = Readonly<{ kan_code: number; kan_name: string }>;
+export type KouCtx = KanCtx & Readonly<{ kou_code: number; kou_name: string }>;
+export type MokuCtx = KouCtx & Readonly<{ moku_code: number; moku_name: string }>;
 
 // ── Validation ──
 
