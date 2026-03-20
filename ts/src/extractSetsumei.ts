@@ -81,13 +81,22 @@ const toSetsumeiRows = (rows: ReadonlyArray<Row>): ReadonlyArray<SetsumeiRow> =>
       if (raw.length <= 0 || isHeaderText(raw)) return { result, skipNext: false };
 
       const countSpaces = countLeadingZenkakuSpaces(raw);
-      const nextRow = arr[index + 1];
+      const nextRow = arr[index + 1]; // TODO: 三行以上の説明テキストへの対応. その場合は while で次行もチェックする必要がある. skipNext ではなく, skipLines: number みたいな形で管理する必要がある
       const nextraw = nextRow ? cellRaw(nextRow, COL.AT).trim() : "";
       const text = raw.trim() + nextraw;
 
+      for (let i = COL.AT + 1; i < COL.RIGHTMOST; i++) {
+        if (cellIsNumber(row, i)) {
+          return {
+            result: [...result, { indent: countSpaces, text, amount: row[i] as number }],
+            skipNext: true,
+          };
+        }
+      }
+      // TODO: 先頭行でない行に amount が書かれる場合はあるか? あるなら対応しなければならない。上行は1行目に amount がある場合の例
       return {
-        result: [...result, { indent: countSpaces, text }],
-        skipNext: nextraw.length > 0,
+        result: [...result, { indent: countSpaces, text, amount: null }],
+        skipNext: false,
       };
     },
     { result: [], skipNext: false }
