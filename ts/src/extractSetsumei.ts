@@ -60,9 +60,16 @@ const safeNum = (row: Row, col: number): number | null =>
 // ── Tagged row type ──
 
 type SetsumeiRow = Readonly<{
-  level: IndentLevel;
-  text: string;
-  row: Row;
+  indent: number;
+  code: string | null;
+  name: string;
+  amount: number | null;
+}>;
+
+type NodeLevel = Exclude<IndentLevel, "continuation">;
+
+type ParseResult = Readonly<{
+  nodes: ReadonlyArray<Setsumei>;
 }>;
 
 /** Check if AT text is a header remnant (e.g. "説　　明" with internal spaces) */
@@ -84,18 +91,20 @@ const toSetsumeiRows = (rows: ReadonlyArray<Row>): ReadonlyArray<SetsumeiRow> =>
       const nextRow = arr[index + 1]; // TODO: 三行以上の説明テキストへの対応. その場合は while で次行もチェックする必要がある. skipNext ではなく, skipLines: number みたいな形で管理する必要がある
       const nextraw = nextRow ? cellRaw(nextRow, COL.AT).trim() : "";
       const text = raw.trim() + nextraw;
+      const code = text.match(CODE_NAME_PATTERN)?.[1] ?? null; // TODO: 仕組みはわからん
+      const name = code ? text.replace(code, "").trim() : text; // TODO: 仕組みはわからん
 
       for (let i = COL.AT + 1; i < COL.RIGHTMOST; i++) {
         if (cellIsNumber(row, i)) {
           return {
-            result: [...result, { indent: countSpaces, text, amount: row[i] as number }],
+            result: [...result, { indent: countSpaces, code, name, amount: row[i] as number }],
             skipNext: true,
           };
         }
       }
       // TODO: 先頭行でない行に amount が書かれる場合はあるか? あるなら対応しなければならない。上行は1行目に amount がある場合の例
       return {
-        result: [...result, { indent: countSpaces, text, amount: null }],
+        result: [...result, { indent: countSpaces, code, name, amount: null }],
         skipNext: false,
       };
     },
