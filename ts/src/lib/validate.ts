@@ -9,7 +9,6 @@
 import type {
     KouCtx,
     MokuBudget,
-    MokuCode,
     MokuCtx,
     Row,
     Setsu,
@@ -28,14 +27,10 @@ export const validateSetsuSum = (
   setsuList: ReadonlyArray<Setsu>,
 ): ReadonlyArray<ValidationError> => {
   const expected = budget.honendo;
-  return expected === null
+  const actual = sum(setsuList.map((s) => s.amount));
+  return actual === expected
     ? []
-    : (() => {
-        const actual = sum(setsuList.map((s) => s.amount));
-        return actual === expected
-          ? []
-          : [{ type: "setsu_sum_mismatch" as const, context, expected, actual }];
-      })();
+    : [{ type: "setsu_sum_mismatch" as const, context, expected, actual }];
 };
 
 /** Validate 大事業 BR sum matches 目 honendo */
@@ -45,14 +40,10 @@ export const validateSetsumeiSum = (
   tree: ReadonlyArray<Setsumei>,
 ): ReadonlyArray<ValidationError> => {
   const expected = budget.honendo;
-  return expected === null
+  const actual = sum(tree.map((d) => d.amount));
+  return actual === expected
     ? []
-    : (() => {
-        const actual = sum(tree.map((d) => d.amount));
-        return actual === expected
-          ? []
-          : [{ type: "setsumei_sum_mismatch" as const, context, expected, actual }];
-      })();
+    : [{ type: "setsumei_sum_mismatch" as const, context, expected, actual }];
 };
 
 /** Validate 項合計 (計 row) matches sum of 目 honendo */
@@ -71,7 +62,7 @@ export const validateKouSum = (
     ? []
     : (() => {
         const actual = sum(budgets.map((m) => m.honendo));
-        const mokuCtx: MokuCtx = { ...context, moku_code: 0 as MokuCode, moku_name: "計" };
+        const mokuCtx: MokuCtx = { ...context, moku_code: 0, moku_name: "計" };
         return actual === expected
           ? []
           : [{ type: "kou_sum_mismatch" as const, context: mokuCtx, expected, actual }];

@@ -5,12 +5,12 @@
  * C列が "計" の行は項合計行（検算用に別途返す）。
  */
 
-import { COL, type MokuBudget, type MokuChunk, type MokuCode, type Row } from "./types";
-import { cellCode, cellIsNumber, cellNum, cellStr } from "./util";
+import { COL, type MokuBudget, type MokuChunk, type Row } from "./types";
+import { cellCode, cellNum, cellStr } from "./util";
 
 type MokuBoundary = Readonly<{
   index: number;
-  code: MokuCode;
+  code: number;
   name: string;
   budget: MokuBudget;
 }>;
@@ -22,14 +22,21 @@ const isMokuStart = (row: Row): boolean => {
   return code !== null && name.length > 0 && !name.includes("項");
 };
 
-const extractBudget = (row: Row): MokuBudget => ({
-  honendo: cellIsNumber(row, COL.L) ? cellNum(row, COL.L) : null,
-  zenendo: cellIsNumber(row, COL.O) ? cellNum(row, COL.O) : null,
-  hikaku: cellIsNumber(row, COL.R) ? cellNum(row, COL.R) : null,
-  kokuken_shishutukin: cellIsNumber(row, COL.U) ? cellNum(row, COL.U) : null,
-  chihousai: cellIsNumber(row, COL.X) ? cellNum(row, COL.X) : null,
-  sonota: cellIsNumber(row, COL.AA) ? cellNum(row, COL.AA) : null,
-  ippan_zaigen: cellIsNumber(row, COL.AE) ? cellNum(row, COL.AE) : null,
+const requireNum = (row: Row, col: number, field: string, mokuName: string): number => {
+  const v = cellNum(row, col);
+  return v !== null
+    ? v
+    : (() => { throw new Error(`Missing required budget field "${field}" in 目 "${mokuName}"`); })();
+};
+
+const extractBudget = (row: Row, mokuName: string): MokuBudget => ({
+  honendo:              requireNum(row, COL.L,  "honendo",              mokuName),
+  zenendo:              requireNum(row, COL.O,  "zenendo",              mokuName),
+  hikaku:               requireNum(row, COL.R,  "hikaku",               mokuName),
+  kokuken_shishutukin:  requireNum(row, COL.U,  "kokuken_shishutukin",  mokuName),
+  chihousai:            requireNum(row, COL.X,  "chihousai",            mokuName),
+  sonota:               requireNum(row, COL.AA, "sonota",               mokuName),
+  ippan_zaigen:         requireNum(row, COL.AE, "ippan_zaigen",         mokuName),
 });
 
 const isKeiRow = (row: Row): boolean =>
@@ -52,9 +59,9 @@ export const splitByMoku = (
             ...acc,
             {
               index,
-              code: cellCode(row, COL.C)! as MokuCode,
+              code: cellCode(row, COL.C)!,
               name: cellStr(row, COL.E),
-              budget: extractBudget(row),
+              budget: extractBudget(row, cellStr(row, COL.E)),
             },
           ]
         : acc,

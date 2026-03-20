@@ -8,7 +8,7 @@
  * Full-width digits (１, ２, ...) are normalized before matching.
  */
 
-import { COL, type KouChunk, type KouCode, type Row } from "./types";
+import { COL, type KouChunk, type Row } from "./types";
 import { cellStr, normalizeDigits } from "./util";
 
 /** 項パターン: "　N項　XXX" — handles full-width digits and spaces */
@@ -16,7 +16,7 @@ const KOU_PATTERN = /^\s*(\d+)項\s+(.+)$/;
 
 type KouBoundary = Readonly<{
   index: number;
-  code: KouCode;
+  code: number;
   name: string;
 }>;
 
@@ -28,7 +28,7 @@ const findKouBoundaries = (rows: ReadonlyArray<Row>): ReadonlyArray<KouBoundary>
     return m === null
       ? acc
       : (() => {
-          const code = parseInt(m[1]!, 10) as KouCode;
+          const code = parseInt(m[1]!, 10);
           const lastCode = acc.length > 0 ? acc[acc.length - 1]!.code : -1;
           return code === lastCode
             ? acc

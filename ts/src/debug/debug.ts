@@ -54,12 +54,9 @@ const rowSummary = (row: Row, rowIdx: number): string => {
   const an = cellStr(row, COL.AN);
   const aq = cellIsNumber(row, COL.AQ) ? cellNum(row, COL.AQ) : "";
   const at = cellRaw(row, COL.AT);
-  const bl = cellIsNumber(row, COL.BL) ? cellNum(row, COL.BL) : "";
-  const bn = cellIsNumber(row, COL.BN) ? cellNum(row, COL.BN) : "";
-  const br = cellIsNumber(row, COL.BR) ? cellNum(row, COL.BR) : "";
   const isHeader = isHeaderRow(row);
   const tag = isHeader ? " [HEADER]" : "";
-  return `  row${String(rowIdx).padStart(5)}${tag} | C=${c} | E=${e} | L=${String(l)} | AL=${al} | AN=${an} | AQ=${String(aq)} | AT=${String(at ?? "")} | BL=${String(bl)} | BN=${String(bn)} | BR=${String(br)}`;
+  return `  row${String(rowIdx).padStart(5)}${tag} | C=${c} | E=${e} | L=${String(l)} | AL=${al} | AN=${an} | AQ=${String(aq)} | AT=${String(at ?? "")}`;
 };
 
 /** Row を全セル生データとしてダンプ（列番号付き） */

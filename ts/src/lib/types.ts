@@ -129,13 +129,13 @@ export type Kou = Readonly<{
 export type Moku = Readonly<{
   code: number;
   name: string;
-  honendo: number | null;
-  zenendo: number | null;
-  hikaku: number | null;
-  kokuken_shishutukin: number | null;
-  chihousai: number | null;
-  sonota: number | null;
-  ippan_zaigen: number | null;
+  honendo: number;
+  zenendo: number;
+  hikaku: number;
+  kokuken_shishutukin: number;
+  chihousai: number;
+  sonota: number;
+  ippan_zaigen: number;
   setsu: ReadonlyArray<Setsu>;
   setsumei: ReadonlyArray<Setsumei>;
 }>;

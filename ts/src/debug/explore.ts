@@ -26,9 +26,6 @@ const keyColumns = [
   { name: "AN", col: COL.AN },
   { name: "AQ", col: COL.AQ },
   { name: "AT", col: COL.AT },
-  { name: "BL", col: COL.BL },
-  { name: "BN", col: COL.BN },
-  { name: "BR", col: COL.BR },
 ];
 
 const nonEmpty = sheet.rows.filter((row) =>
