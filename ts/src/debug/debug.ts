@@ -16,7 +16,7 @@ import { join } from "node:path";
 import { readBudgetExcel } from "../lib/excel";
 import { extractSetsu } from "../lib/extractSetsu";
 import { extractSetsumei } from "../lib/extractSetsumei";
-import { parseSheetName } from "../lib/parseSheetName";
+import { parseKanMeta } from "../lib/parseSheetName";
 import { splitByKou } from "../lib/splitByKou";
 import { splitByMoku } from "../lib/splitByMoku";
 import { isHeaderRow, stripHeaders } from "../lib/stripHeaders";
@@ -74,7 +74,7 @@ const rowRawDump = (row: Row, rowIdx: number): string => {
 const dumpAll = (sheets: ReadonlyArray<ReturnType<typeof readBudgetExcel>[number]>): void => {
   // Step 0: Excel読み込み直後の全セル生データ
   sheets.map((s) => {
-    const { kan_code, kan_name } = parseSheetName(s.sheetName);
+    const { kan_code, kan_name } = parseKanMeta(s);
     const prefix = `${String(kan_code).padStart(2, "0")}_${kan_name}`;
     const rawExcelWriter = createWriter();
     rawExcelWriter.log(`=== Sheet "${s.sheetName}" — ${s.rows.length} rows (raw Excel data) ===`);
@@ -86,7 +86,7 @@ const dumpAll = (sheets: ReadonlyArray<ReturnType<typeof readBudgetExcel>[number
   const summary = createWriter();
   summary.log("=== Sheets ===");
   sheets.map((s) => {
-    const { kan_code, kan_name } = parseSheetName(s.sheetName);
+    const { kan_code, kan_name } = parseKanMeta(s);
     const clean = stripHeaders(s.rows);
     const kouChunks = splitByKou(clean);
     return summary.log(`  ${kan_code} ${kan_name}: ${s.rows.length} raw → ${clean.length} clean rows, ${kouChunks.length} 項`);
@@ -95,7 +95,7 @@ const dumpAll = (sheets: ReadonlyArray<ReturnType<typeof readBudgetExcel>[number
 
   // 各シートを処理
   sheets.map((s) => {
-    const { kan_code, kan_name } = parseSheetName(s.sheetName);
+    const { kan_code, kan_name } = parseKanMeta(s);
     const prefix = `${String(kan_code).padStart(2, "0")}_${kan_name}`;
     const cleanSheetRows = stripHeaders(s.rows);
     const kouChunks = splitByKou(cleanSheetRows);

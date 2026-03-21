@@ -65,3 +65,19 @@ export const cellHasValue = (row: Row, col: number): boolean => {
 /** Check if cell value is a number (not text propagated from merge) */
 export const cellIsNumber = (row: Row, col: number): boolean =>
   typeof row[col] === "number";
+
+/**
+ * Scan rightward from startCol and return the first numeric cell value found, or null.
+ * Functor over column indices: maps to number|null, finds first non-null.
+ */
+export const firstNumRight = (row: Row, startCol: number): number | null =>
+  Array.from({ length: row.length - startCol }, (_, i) => cellNum(row, startCol + i))
+    .find((v) => v !== null) ?? null;
+
+/** Same as firstNumRight, but throws if no numeric value is found (required field). */
+export const requireFirstNumRight = (row: Row, startCol: number, context: string): number => {
+  const v = firstNumRight(row, startCol);
+  return v !== null
+    ? v
+    : (() => { throw new Error(`Missing required amount scanning right from col ${startCol}: ${context}`); })();
+};

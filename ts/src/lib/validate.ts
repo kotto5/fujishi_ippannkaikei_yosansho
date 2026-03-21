@@ -7,6 +7,7 @@
  */
 
 import type {
+    KanCtx,
     KouCtx,
     MokuBudget,
     MokuCtx,
@@ -44,6 +45,30 @@ export const validateSetsumeiSum = (
   return actual === expected
     ? []
     : [{ type: "setsumei_sum_mismatch" as const, context, expected, actual }];
+};
+
+/** Validate Σ moku.honendo === kou.amount (項ヘッダー値) */
+export const validateMokuSumVsKou = (
+  context: KouCtx,
+  kouAmount: number,
+  budgets: ReadonlyArray<MokuBudget>,
+): ReadonlyArray<ValidationError> => {
+  const actual = sum(budgets.map((m) => m.honendo));
+  return actual === kouAmount
+    ? []
+    : [{ type: "moku_sum_vs_kou" as const, context, expected: kouAmount, actual }];
+};
+
+/** Validate Σ kou.amount === kan.amount (款ヘッダー値) */
+export const validateKouSumVsKan = (
+  context: KanCtx,
+  kanAmount: number,
+  kous: ReadonlyArray<{ amount: number }>,
+): ReadonlyArray<ValidationError> => {
+  const actual = sum(kous.map((k) => k.amount));
+  return actual === kanAmount
+    ? []
+    : [{ type: "kou_sum_vs_kan" as const, context, expected: kanAmount, actual }];
 };
 
 /** Validate 項合計 (計 row) matches sum of 目 honendo */

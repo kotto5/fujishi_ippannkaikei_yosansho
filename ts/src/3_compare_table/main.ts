@@ -56,9 +56,9 @@ const flattenSetsumei =
 
 const flattenYear = (year: Year): ReadonlyArray<ExportDataRow> =>
   year.kans.flatMap(kan => [
-    { kan_name: kan.name, year: year.year, amount: 0 } satisfies ExportDataKanRow,
+    { kan_name: kan.name, year: year.year, amount: kan.amount } satisfies ExportDataKanRow,
     ...kan.kou.flatMap(kou => [
-      { kan_name: kan.name, kou_name: kou.name, year: year.year, amount: 0 } satisfies ExportDataKouRow,
+      { kan_name: kan.name, kou_name: kou.name, year: year.year, amount: kou.amount } satisfies ExportDataKouRow,
       ...kou.moku.flatMap(moku => {
         const ctx = { kan_name: kan.name, kou_name: kou.name, moku_name: moku.name, year: year.year };
         return [

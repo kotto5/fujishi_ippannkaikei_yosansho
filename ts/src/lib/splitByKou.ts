@@ -9,7 +9,7 @@
  */
 
 import { COL, type KouChunk, type Row } from "./types";
-import { cellStr, normalizeDigits } from "./util";
+import { cellStr, normalizeDigits, requireFirstNumRight } from "./util";
 
 /** 項パターン: "　N項　XXX" — handles full-width digits and spaces */
 const KOU_PATTERN = /^\s*(\d+)項\s+(.+)$/;
@@ -18,6 +18,7 @@ type KouBoundary = Readonly<{
   index: number;
   code: number;
   name: string;
+  amount: number;
 }>;
 
 /** Find all 項 boundary rows where kou_code changes */
@@ -32,7 +33,7 @@ const findKouBoundaries = (rows: ReadonlyArray<Row>): ReadonlyArray<KouBoundary>
           const lastCode = acc.length > 0 ? acc[acc.length - 1]!.code : -1;
           return code === lastCode
             ? acc
-            : [...acc, { index, code, name: m[2]!.trim() }];
+            : [...acc, { index, code, name: m[2]!.trim(), amount: requireFirstNumRight(row, COL.E, `項 ${code} "${m[2]!.trim()}"`) }];
         })();
   }, []);
 
@@ -46,6 +47,7 @@ export const splitByKou = (rows: ReadonlyArray<Row>): ReadonlyArray<KouChunk> =>
     return {
       code: boundary.code,
       name: boundary.name,
+      amount: boundary.amount,
       rows: rows.slice(boundary.index, nextIndex),
     };
   });

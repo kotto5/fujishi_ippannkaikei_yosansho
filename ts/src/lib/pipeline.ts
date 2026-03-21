@@ -8,12 +8,12 @@
 import { readBudgetExcel, type SheetData } from "./excel";
 import { extractSetsu } from "./extractSetsu";
 import { extractSetsumei } from "./extractSetsumei";
-import { parseSheetName } from "./parseSheetName";
+import { parseKanMeta } from "./parseSheetName";
 import { splitByKou } from "./splitByKou";
 import { splitByMoku } from "./splitByMoku";
 import { stripHeaders } from "./stripHeaders";
-import type { Kan, Kou, KouCtx, Moku, MokuBudget, MokuChunk, ValidationError } from "./types";
-import { validateKouSum, validateSetsuSum, validateSetsumeiSum } from "./validate";
+import type { Kan, KanCtx, Kou, KouCtx, Moku, MokuBudget, MokuChunk, ValidationError } from "./types";
+import { validateKouSum, validateKouSumVsKan, validateMokuSumVsKou, validateSetsuSum, validateSetsumeiSum } from "./validate";
 
 // ── Generic accumulator: chunk → node + errors ──
 
@@ -62,7 +62,7 @@ const processMoku = (chunk: MokuChunk, ctx: KouCtx): WithErrors<Moku & { budget:
 
 /** Process a single sheet → Kan */
 const processSheet = (sheet: SheetData): WithErrors<Kan> => {
-  const { kan_code, kan_name } = parseSheetName(sheet.sheetName);
+  const { kan_code, kan_name, kan_amount } = parseKanMeta(sheet);
   const cleanRows = stripHeaders(sheet.rows);
 
   return foldChunks(
@@ -77,12 +77,20 @@ const processSheet = (sheet: SheetData): WithErrors<Kan> => {
         (mokus): Kou => ({
           code: kouChunk.code,
           name: kouChunk.name,
+          amount: kouChunk.amount,
           moku: mokus.map(({ budget: _, ...m }) => m),
         }),
-        (mokus) => validateKouSum(kouCtx, keiRow, mokus.map((m) => m.budget)),
+        (mokus) => [
+          ...validateKouSum(kouCtx, keiRow, mokus.map((m) => m.budget)),
+          ...validateMokuSumVsKou(kouCtx, kouChunk.amount, mokus.map((m) => m.budget)),
+        ],
       );
     },
-    (kous): Kan => ({ code: kan_code, name: kan_name, kou: kous }),
+    (kous): Kan => ({ code: kan_code, name: kan_name, amount: kan_amount, kou: kous }),
+    (kous) => {
+      const kanCtx: KanCtx = { kan_code, kan_name };
+      return validateKouSumVsKan(kanCtx, kan_amount, kous);
+    },
   );
 };
 

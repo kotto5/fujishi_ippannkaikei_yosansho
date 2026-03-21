@@ -115,14 +115,14 @@ export type Year = Readonly<{
 export type Kan = Readonly<{
   code: number;
   name: string;
-  // amount: number;
+  amount: number;
   kou: ReadonlyArray<Kou>;
 }>;
 
 export type Kou = Readonly<{
   code: number;
   name: string;
-  // amount: number;
+  amount: number;
   moku: ReadonlyArray<Moku>;
 }>;
 
@@ -164,7 +164,7 @@ export type MokuBudget = Pick<Moku, "honendo" | "zenendo" | "hikaku" | "kokuken_
 export type KouChunk = Readonly<{
   code: number;
   name: string;
-  // amount: number;
+  amount: number;
   rows: ReadonlyArray<Row>;
 }>;
 
@@ -183,9 +183,22 @@ export type MokuCtx = KouCtx & Readonly<{ moku_code: number; moku_name: string }
 
 // ── Validation ──
 
-export type ValidationError = Readonly<{
-  type: "setsu_sum_mismatch" | "setsumei_sum_mismatch" | "kou_sum_mismatch";
-  context: MokuCtx;
-  expected: number;
-  actual: number;
-}>;
+export type ValidationError =
+  | Readonly<{
+      type: "setsu_sum_mismatch" | "setsumei_sum_mismatch" | "kou_sum_mismatch";
+      context: MokuCtx;
+      expected: number;
+      actual: number;
+    }>
+  | Readonly<{
+      type: "moku_sum_vs_kou";
+      context: KouCtx;
+      expected: number;
+      actual: number;
+    }>
+  | Readonly<{
+      type: "kou_sum_vs_kan";
+      context: KanCtx;
+      expected: number;
+      actual: number;
+    }>;

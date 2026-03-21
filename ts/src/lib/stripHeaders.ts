@@ -25,7 +25,7 @@ const isHeaderBlockEnd = (row: Row): boolean =>
   cellStr(row, COL.K).includes("千円");
 
 /** 款ヘッダー行: C列に "N款" パターン */
-const isKanHeader = (row: Row): boolean =>
+export const isKanHeader = (row: Row): boolean =>
   /\d+款/.test(normalizeDigits(cellStr(row, COL.C)));
 
 /** ページフッタ: A列に "歳出予算書" */

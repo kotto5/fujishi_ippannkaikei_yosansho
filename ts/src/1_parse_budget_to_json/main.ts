@@ -31,9 +31,12 @@ const main = (): void => {
     process.stderr.write(
       `\n=== Validation Errors (${errors.length}) ===\n` +
       errors
-        .map(
-          (e) =>
-            `[${e.type}] ${e.context.kan_name}/${e.context.kou_name}/${e.context.moku_name}: expected=${e.expected}, actual=${e.actual}`,
+        .map((e) =>
+          e.type === "kou_sum_vs_kan"
+            ? `[${e.type}] ${e.context.kan_name}: expected=${e.expected}, actual=${e.actual}`
+            : e.type === "moku_sum_vs_kou"
+              ? `[${e.type}] ${e.context.kan_name}/${e.context.kou_name}: expected=${e.expected}, actual=${e.actual}`
+              : `[${e.type}] ${e.context.kan_name}/${e.context.kou_name}/${e.context.moku_name}: expected=${e.expected}, actual=${e.actual}`,
         )
         .join("\n") +
       "\n",
