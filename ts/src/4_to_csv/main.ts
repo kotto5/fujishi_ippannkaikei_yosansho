@@ -32,7 +32,7 @@ const csvRows = rows.map(row => {
   const amountMap = Object.fromEntries(row.amount.map(a => [a.year, a.amount]));
   return [
     ...DIMENSION_KEYS.map(k => escape(row[k])),
-    ...years.map(y => escape(amountMap[y] ?? null)),
+    ...years.map(y => y in amountMap ? escape(amountMap[y]) : "0"),
   ].join(",");
 });
 
