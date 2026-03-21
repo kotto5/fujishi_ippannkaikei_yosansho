@@ -67,17 +67,18 @@ export const cellIsNumber = (row: Row, col: number): boolean =>
   typeof row[col] === "number";
 
 /**
- * Scan rightward from startCol and return the first numeric cell value found, or null.
+ * Scan rightward from anchorCol+1 and return the first numeric cell value found, or null.
+ * anchorCol is the reference column (e.g. label column); search starts one column to its right.
  * Functor over column indices: maps to number|null, finds first non-null.
  */
-export const firstNumRight = (row: Row, startCol: number): number | null =>
-  Array.from({ length: row.length - startCol }, (_, i) => cellNum(row, startCol + i))
+export const firstNumRight = (row: Row, anchorCol: number): number | null =>
+  Array.from({ length: row.length - anchorCol - 1 }, (_, i) => cellNum(row, anchorCol + 1 + i))
     .find((v) => v !== null) ?? null;
 
 /** Same as firstNumRight, but throws if no numeric value is found (required field). */
-export const requireFirstNumRight = (row: Row, startCol: number, context: string): number => {
-  const v = firstNumRight(row, startCol);
+export const requireFirstNumRight = (row: Row, anchorCol: number, context: string): number => {
+  const v = firstNumRight(row, anchorCol);
   return v !== null
     ? v
-    : (() => { throw new Error(`Missing required amount scanning right from col ${startCol}: ${context}`); })();
+    : (() => { throw new Error(`Missing required amount scanning right from col ${anchorCol + 1}: ${context}`); })();
 };

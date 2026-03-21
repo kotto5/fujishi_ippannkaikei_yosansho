@@ -27,7 +27,7 @@ export const parseKanMeta = (sheet: SheetData): KanMeta => {
   const { kan_code, kan_name } = parseNameFromSheet(sheet.sheetName);
   const headerRow = sheet.rows.find(isKanHeader);
   const kan_amount = headerRow !== undefined
-    ? requireFirstNumRight(headerRow, COL.E, `款 "${kan_name}"`)
+    ? requireFirstNumRight(headerRow, COL.C, `款 "${kan_name}"`)
     : (() => { throw new Error(`款 header row not found for "${kan_name}"`); })();
   return { kan_code, kan_name, kan_amount };
 };

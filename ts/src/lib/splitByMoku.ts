@@ -30,13 +30,14 @@ const requireNum = (row: Row, col: number, field: string, mokuName: string): num
 };
 
 const extractBudget = (row: Row, mokuName: string): MokuBudget => ({
-  honendo:              requireNum(row, COL.L,  "honendo",              mokuName),
-  zenendo:              requireNum(row, COL.O,  "zenendo",              mokuName),
-  hikaku:               requireNum(row, COL.R,  "hikaku",               mokuName),
-  kokuken_shishutukin:  requireNum(row, COL.U,  "kokuken_shishutukin",  mokuName),
-  chihousai:            requireNum(row, COL.X,  "chihousai",            mokuName),
-  sonota:               requireNum(row, COL.AA, "sonota",               mokuName),
-  ippan_zaigen:         requireNum(row, COL.AE, "ippan_zaigen",         mokuName),
+  honendo:              requireNum(row, COL.L,  "honendo",  mokuName),
+  zenendo:              requireNum(row, COL.O,  "zenendo",  mokuName),
+  hikaku:               requireNum(row, COL.R,  "hikaku",   mokuName),
+  // 財源内訳は空セル = 0円（予算書の慣習）
+  kokuken_shishutukin:  cellNum(row, COL.U)  ?? 0,
+  chihousai:            cellNum(row, COL.X)  ?? 0,
+  sonota:               cellNum(row, COL.AA) ?? 0,
+  ippan_zaigen:         cellNum(row, COL.AE) ?? 0,
 });
 
 const isKeiRow = (row: Row): boolean =>
