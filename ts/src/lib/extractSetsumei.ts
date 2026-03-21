@@ -42,10 +42,14 @@ const splitCodeName = (text: string): Readonly<{ code: string | null; name: stri
 const safeNum = (row: Row, col: number): number | null =>
   cellIsNumber(row, col) ? (row[col] as number) : null;
 
-/** Find the first numeric amount in columns AT+1..RIGHTMOST-1, and note its column */
+// 説明金額列: BL(細目) → BN(事業) → BR(大事業) の順に左優先でスキャン
+const SETSUMEI_AMOUNT_COLS = [64, 66, 70] as const; // BL, BN, BR
+
+/** Find the first numeric amount in the known setsumei amount columns (BL/BN/BR) */
 const findAmount = (row: Row): Readonly<{ amount: number | null; col: number | null }> => {
-  const cols = Array.from({ length: COL.RIGHTMOST - COL.AT - 1 }, (_, k) => COL.AT + 1 + k);
-  const entry = cols.map(i => ({ col: i, amount: safeNum(row, i) })).find(e => e.amount !== null);
+  const entry = SETSUMEI_AMOUNT_COLS
+    .map(i => ({ col: i, amount: safeNum(row, i) }))
+    .find(e => e.amount !== null);
   return entry ?? { amount: null, col: null };
 };
 
