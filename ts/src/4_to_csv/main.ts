@@ -17,6 +17,17 @@ const DIMENSION_KEYS = [
   "setsumei_layer1_name", "setsumei_layer2_name", "setsumei_layer3_name",
 ] as const;
 
+const HEADER_LABEL: Readonly<Record<string, string>> = {
+  kan_name: "款",
+  kou_name: "項",
+  moku_name: "目",
+  setsu_layer1_name: "節",
+  setsu_layer2_name: "細節",
+  setsumei_layer1_name: "説明1",
+  setsumei_layer2_name: "説明2",
+  setsumei_layer3_name: "説明3",
+};
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const escape = (v: string | number | null | undefined): string =>
@@ -86,8 +97,8 @@ const rankMap: ReadonlyMap<number, number> = new Map(
 // ── CSV output ──────────────────────────────────────────────────────────────
 
 const header = [
-  ...DIMENSION_KEYS,
-  ...years.map(y => `amount_${y}`),
+  ...DIMENSION_KEYS.map(k => HEADER_LABEL[k] ?? k),
+  ...years.map(y => `${y}年度`),
   "増減額",
   "増減率",
   "状態",
