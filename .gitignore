@@ -8,3 +8,5 @@ __pycache__
 ts/node_modules
 outputs/debug
 ts/dist
+ts/outputs/debug
+
