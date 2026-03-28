@@ -40,6 +40,9 @@ export const COL = {
 } as const;
 
 
+// ── 予算項目の状態 ──
+export type BudgetStatus = '新規' | '増額' | '減額' | '横ばい' | '廃止' | '不明';
+
 // 比較データ
 export type CompareRow = Readonly<{
   kan_name: string;
