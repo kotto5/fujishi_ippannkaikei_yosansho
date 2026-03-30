@@ -2,24 +2,44 @@
  * Step 3: ヘッダー除去済みの項チャンク → 目チャンクに分割
  *
  * C列(col 3)に数値(string or number) + E列(col 5)に目名称 → 目の開始行。
+ * E列の名称が複数行にまたがる場合、C列にコードを持たない後続行のE列テキストを結合する。
  * C列が "計" の行は項合計行（検算用に別途返す）。
  */
 
 import { COL, type MokuBudget, type MokuChunk, type Row } from "./types";
 import { cellCode, cellNum, cellStr } from "./util";
 
-type MokuBoundary = Readonly<{
-  index: number;
-  code: number;
-  name: string;
-  budget: MokuBudget;
-}>;
-
 /** 目の開始行: C列に数値的な値 + E列に名称 */
 const isMokuStart = (row: Row): boolean => {
   const code = cellCode(row, COL.C);
   const name = cellStr(row, COL.E);
   return code !== null && name.length > 0 && !name.includes("項");
+};
+
+/**
+ * 名称継続の終端判定: L/O列に予算額がある行（＝コード無し廃目）か、
+ * E列に「項」を含むページヘッダー行が現れたら名称エリア終了。
+ */
+const isNameAreaEnd = (row: Row): boolean =>
+  cellNum(row, COL.L) !== null ||
+  cellNum(row, COL.O) !== null ||
+  cellStr(row, COL.E).includes("項");
+
+/** 開始行〜名称エリア終端までのE列テキストを結合して完全な目名称を得る */
+const collectFullName = (
+  dataRows: ReadonlyArray<Row>,
+  startIndex: number,
+  endIndex: number,
+): string => {
+  const following = dataRows.slice(startIndex + 1, endIndex);
+  const stopIdx = following.findIndex(isNameAreaEnd);
+  const nameArea = stopIdx === -1 ? following : following.slice(0, stopIdx);
+  return [
+    cellStr(dataRows[startIndex]!, COL.E),
+    ...nameArea
+      .filter((row) => cellCode(row, COL.C) === null && cellStr(row, COL.E).length > 0)
+      .map((row) => cellStr(row, COL.E)),
+  ].join("");
 };
 
 const requireNum = (row: Row, col: number, field: string, mokuName: string): number => {
@@ -53,31 +73,21 @@ export const splitByMoku = (
   const keiRow = rows.find(isKeiRow) ?? null;
   const dataRows = rows.filter((r) => !isKeiRow(r));
 
-  const boundaries: ReadonlyArray<MokuBoundary> = dataRows.reduce<ReadonlyArray<MokuBoundary>>(
-    (acc, row, index) =>
-      isMokuStart(row)
-        ? [
-            ...acc,
-            {
-              index,
-              code: cellCode(row, COL.C)!,
-              name: cellStr(row, COL.E),
-              budget: extractBudget(row, cellStr(row, COL.E)),
-            },
-          ]
-        : acc,
+  // Pass 1: 目の開始行インデックスを収集
+  const startIndices: ReadonlyArray<number> = dataRows.reduce<ReadonlyArray<number>>(
+    (acc, row, index) => isMokuStart(row) ? [...acc, index] : acc,
     [],
   );
 
-  const chunks: ReadonlyArray<MokuChunk> = boundaries.map((boundary, i) => {
-    const nextIndex = i + 1 < boundaries.length
-      ? boundaries[i + 1]!.index
-      : dataRows.length;
+  // Pass 2: 各目の完全名称を結合しつつチャンクを構築
+  const chunks: ReadonlyArray<MokuChunk> = startIndices.map((startIdx, i) => {
+    const nextIdx = i + 1 < startIndices.length ? startIndices[i + 1]! : dataRows.length;
+    const fullName = collectFullName(dataRows, startIdx, nextIdx);
     return {
-      code: boundary.code,
-      name: boundary.name,
-      budget: boundary.budget,
-      rows: dataRows.slice(boundary.index, nextIndex),
+      code: cellCode(dataRows[startIdx]!, COL.C)!,
+      name: fullName,
+      budget: extractBudget(dataRows[startIdx]!, fullName),
+      rows: dataRows.slice(startIdx, nextIdx),
     };
   });
 
