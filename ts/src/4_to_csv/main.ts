@@ -110,7 +110,7 @@ const csvRows = enrichedRows.map((enriched, idx) =>
     ...DIMENSION_KEYS.map(k => escape(enriched.row[k])),
     ...years.map(y => y in enriched.amountMap ? escape(enriched.amountMap[y]) : "0"),
     escape(enriched.change),
-    enriched.rate !== null ? escape(enriched.rate) : "",
+    enriched.rate !== null ? escape(`${enriched.rate}%`) : "",
     escape(enriched.status),
     rankMap.has(idx) ? String(rankMap.get(idx)) : "",
   ].join(",")
